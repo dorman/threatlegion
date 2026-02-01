@@ -1,0 +1,101 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="sm:flex sm:items-center sm:justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Indicators of Compromise</h1>
+      <p class="mt-2 text-sm text-gray-600">Track and manage IOCs across all threats</p>
+    </div>
+    <div class="mt-4 sm:mt-0 flex space-x-3">
+      <%= link_to "Check IP (AbuseIPDB)", abuseipdb_check_path, class: "inline-flex items-center px-4 py-2 border border-purple-300 text-sm font-medium rounded-md shadow-sm text-purple-700 bg-purple-50 hover:bg-purple-100" %>
+      <%= link_to "View Blacklist", abuseipdb_blacklist_path, class: "inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md shadow-sm text-red-700 bg-red-50 hover:bg-red-100" %>
+      <%= link_to "New Indicator", new_indicator_path, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" %>
+    </div>
+  </div>
+
+  <div class="bg-white shadow rounded-lg mb-6">
+    <div class="p-6">
+      <%= search_form_for @q, url: indicators_path, method: :get, html: { class: "space-y-4" } do |f| %>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div>
+            <%= f.label :value_cont, "Value", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.search_field :value_cont, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm", placeholder: "Search by value" %>
+          </div>
+          <div>
+            <%= f.label :indicator_type_eq, "Type", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.select :indicator_type_eq, options_for_select([["All Types", ""], ["IP Address", "ip"], ["Domain", "domain"], ["URL", "url"], ["Hash", "hash"], ["Email", "email"], ["File Path", "file_path"], ["Registry Key", "registry_key"]], f.object.indicator_type_eq), {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+          </div>
+          <div>
+            <%= f.label :source_cont, "Source", class: "block text-sm font-medium text-gray-700" %>
+            <%= f.search_field :source_cont, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm", placeholder: "Search by source" %>
+          </div>
+        </div>
+        <div class="flex justify-end space-x-3">
+          <%= link_to "Reset", indicators_path, class: "inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" %>
+          <%= f.submit "Search", class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Threat</th>
+          <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Seen</th>
+          <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        <% @indicators.each do |indicator| %>
+          <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                <%= indicator.indicator_type&.upcase %>
+              </span>
+            </td>
+            <td class="px-6 py-4 text-sm font-mono text-gray-900">
+              <%= link_to indicator.value, indicator, class: "text-blue-600 hover:text-blue-900" %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <% if indicator.confidence %>
+                <div class="flex items-center">
+                  <span class="mr-2"><%= indicator.confidence %>%</span>
+                  <div class="w-16 bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: <%= indicator.confidence %>%"></div>
+                  </div>
+                </div>
+              <% else %>
+                N/A
+              <% end %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <%= indicator.source || "N/A" %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <% if indicator.threat %>
+                <%= link_to indicator.threat.name, indicator.threat, class: "text-purple-600 hover:text-purple-900" %>
+              <% else %>
+                <span class="text-gray-400">Unassigned</span>
+              <% end %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <%= indicator.last_seen ? time_ago_in_words(indicator.last_seen) + " ago" : "N/A" %>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <%= link_to "View", indicator, class: "text-blue-600 hover:text-blue-900 mr-3" %>
+              <%= link_to "Edit", edit_indicator_path(indicator), class: "text-gray-600 hover:text-gray-900" %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-6">
+    <%= paginate @indicators %>
+  </div>
+</div>

@@ -1,0 +1,748 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Threat Intelligence Dashboard</h1>
+    <p class="mt-2 text-sm text-gray-600">Real-time overview of cyber threats and indicators</p>
+  </div>
+
+  <!-- DEFCON-Style Threat Level Widget -->
+  <div class="mb-8">
+    <% 
+      # Determine gradient colors based on threat level
+      gradient_colors = case @threat_level_config[:color]
+      when 'green'
+        'from-gray-900 via-gray-800 to-black'
+      when 'blue'
+        'from-gray-900 via-blue-900 to-gray-800'
+      when 'yellow'
+        'from-gray-900 via-yellow-900 to-gray-800'
+      when 'orange'
+        'from-gray-900 via-orange-900 to-gray-800'
+      when 'red'
+        'from-gray-900 via-red-900 to-gray-800'
+      else
+        'from-gray-900 via-gray-800 to-black'
+      end
+      
+      # Determine stroke gradient - always use purple for the gauge
+      stroke_gradient_id = "threat-gradient-purple"
+      stroke_colors = { start: '#9333ea', end: '#7c3aed' } # purple-600 to purple-600
+      
+      # Check if critical state (DEFCON 1 or 2)
+      is_critical = @threat_level == 'DEFCON 1' || @threat_level == 'DEFCON 2'
+      pulse_class = if @threat_level == 'DEFCON 1'
+        'threat-critical'
+      elsif @threat_level == 'DEFCON 2'
+        'threat-critical-orange'
+      else
+        ''
+      end
+    %>
+    <div id="threat-level-widget" 
+         class="bg-gradient-to-r <%= gradient_colors %> rounded-xl shadow-2xl overflow-hidden border-2 border-<%= @threat_level_config[:color] %>-500 threat-transition <%= pulse_class %>"
+         style="<%= is_critical ? "box-shadow: 0 0 30px rgba(#{@threat_level_config[:color] == 'red' ? '239, 68, 68' : '249, 115, 22'}, 0.5);" : '' %>"
+         data-threat-level="<%= @threat_level %>"
+         data-threat-color="<%= @threat_level_config[:color] %>"
+         data-security-score="<%= @security_score %>">
+      <div class="px-6 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Left: DEFCON Level Display -->
+          <div class="flex flex-col justify-center">
+            <div class="text-center">
+              <div id="threat-level-number" class="text-6xl font-bold text-<%= @threat_level_config[:color] %>-500 mb-2 transition-colors duration-1000">
+                <%= @threat_level %>
+              </div>
+              <div class="text-lg font-semibold text-gray-100 uppercase tracking-wider mb-2 drop-shadow-lg">
+                <%= @threat_level_config[:description].split(' - ').first %>
+              </div>
+              <div class="text-sm text-gray-300">
+                <%= @threat_level_config[:description].split(' - ').last %>
+              </div>
+              <% if is_critical %>
+                <div class="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-<%= @threat_level_config[:color] %>-500 bg-opacity-20 border border-<%= @threat_level_config[:color] %>-400 animate-pulse">
+                  <span class="inline-block w-2 h-2 rounded-full bg-<%= @threat_level_config[:color] %>-400 mr-2"></span>
+                  <span class="text-xs font-semibold text-<%= @threat_level_config[:color] %>-300">CRITICAL ALERT</span>
+                </div>
+              <% end %>
+            </div>
+          </div>
+          
+          <!-- Center: Circular Gauge -->
+          <div class="flex items-center justify-center">
+            <div class="relative" style="width: 200px; height: 200px;">
+              <svg class="transform -rotate-90 absolute inset-0" width="200" height="200" viewBox="0 0 200 200">
+                <defs>
+                  <linearGradient id="<%= stroke_gradient_id %>" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" style="stop-color:<%= stroke_colors[:start] %>;stop-opacity:1" />
+                    <stop offset="100%" style="stop-color:<%= stroke_colors[:end] %>;stop-opacity:1" />
+                  </linearGradient>
+                </defs>
+                <!-- Background circle -->
+                <circle cx="100" cy="100" r="80" stroke="#1f1f1f" stroke-width="16" fill="none" />
+                <!-- Progress circle with gradient -->
+                <circle id="threat-gauge-circle" 
+                  cx="100" cy="100" r="80" 
+                  stroke="url(#<%= stroke_gradient_id %>)" 
+                  stroke-width="16" 
+                  fill="none"
+                  stroke-dasharray="<%= 2 * Math::PI * 80 %>"
+                  stroke-dashoffset="<%= 2 * Math::PI * 80 %>"
+                  stroke-linecap="round"
+                  class="transition-all duration-2000 ease-out" />
+              </svg>
+              <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center pointer-events-none">
+                <div id="threat-score-number" class="text-9xl font-bold text-purple-500 transition-all duration-1000 drop-shadow-2xl text-center" style="text-shadow: 0 0 15px rgba(168, 85, 247, 0.6), 0 0 30px rgba(168, 85, 247, 0.4); line-height: 1;"><%= @security_score %></div>
+                <div class="text-sm font-semibold text-gray-200 uppercase tracking-wider mt-4 text-center">Threat Score</div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Right: Score Components -->
+          <div class="flex flex-col justify-center">
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between items-center bg-black bg-opacity-40 rounded px-3 py-2 transition-colors duration-1000 hover:bg-opacity-60">
+                <span class="text-gray-300">Internal Threats</span>
+                <span class="font-bold text-<%= @threat_level_config[:color] %>-400 transition-colors duration-1000"><%= @score_components[:internal_score] %>/60</span>
+              </div>
+              <div class="flex justify-between items-center bg-black bg-opacity-40 rounded px-3 py-2 transition-colors duration-1000 hover:bg-opacity-60">
+                <span class="text-gray-300">External Intel (abuse.ch)</span>
+                <span class="font-bold text-<%= @threat_level_config[:color] %>-400 transition-colors duration-1000"><%= @score_components[:external_score] %>/40</span>
+              </div>
+              <div class="border-t border-gray-700 pt-2 mt-2">
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="text-center p-2 rounded transition-all duration-300 hover:bg-black hover:bg-opacity-30">
+                    <div class="font-semibold text-white"><%= @score_components[:critical_threats] %></div>
+                    <div class="text-gray-400">Critical</div>
+                  </div>
+                  <div class="text-center p-2 rounded transition-all duration-300 hover:bg-black hover:bg-opacity-30">
+                    <div class="font-semibold text-white"><%= @score_components[:feodo_online] %></div>
+                    <div class="text-gray-400">C2 Online</div>
+                  </div>
+                  <div class="text-center p-2 rounded transition-all duration-300 hover:bg-black hover:bg-opacity-30">
+                    <div class="font-semibold text-white"><%= @score_components[:active_threats] %></div>
+                    <div class="text-gray-400">Active</div>
+                  </div>
+                  <div class="text-center p-2 rounded transition-all duration-300 hover:bg-black hover:bg-opacity-30">
+                    <div class="font-semibold text-white"><%= @score_components[:urlhaus_online] %></div>
+                    <div class="text-gray-400">URLs Online</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Animate gauge fill on load with smooth transitions
+    // Works with both initial page load and Turbo navigation
+    function animateThreatGauge() {
+      const gaugeCircle = document.getElementById('threat-gauge-circle');
+      const scoreNumber = document.getElementById('threat-score-number');
+      const threatLevelNumber = document.getElementById('threat-level-number');
+      const widget = document.getElementById('threat-level-widget');
+      
+      if (!gaugeCircle || !scoreNumber) return;
+      
+      const securityScore = parseInt('<%= @security_score %>');
+      const circumference = 2 * Math.PI * 80;
+      const targetOffset = circumference * (1 - securityScore / 100);
+      
+      // Reset gauge to start position
+      gaugeCircle.style.transition = 'none';
+      gaugeCircle.style.strokeDashoffset = circumference.toString();
+      scoreNumber.textContent = '0';
+      
+      // Reset widget and threat level for entrance animation
+      if (widget) {
+        widget.style.opacity = '0';
+        widget.style.transform = 'translateY(-20px) scale(0.95)';
+      }
+      if (threatLevelNumber) {
+        threatLevelNumber.style.opacity = '0';
+        threatLevelNumber.style.transform = 'scale(0.5)';
+      }
+      
+      // Small delay to ensure reset is visible, then animate
+      setTimeout(() => {
+        // Animate number counter with easing
+        let currentScore = 0;
+        const duration = 2000; // 2 seconds
+        const startTime = Date.now();
+        
+        function animateCounter() {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          
+          // Easing function (ease-out cubic)
+          const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+          currentScore = securityScore * easeOutCubic;
+          
+          scoreNumber.textContent = Math.round(currentScore);
+          
+          if (progress < 1) {
+            requestAnimationFrame(animateCounter);
+          } else {
+            scoreNumber.textContent = securityScore;
+          }
+        }
+        
+        // Start counter animation
+        requestAnimationFrame(animateCounter);
+        
+        // Animate gauge fill with smooth transition
+        gaugeCircle.style.transition = 'stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1)';
+        gaugeCircle.style.strokeDashoffset = targetOffset;
+        
+        // Add entrance animation for widget
+        if (widget) {
+          widget.style.transition = 'opacity 0.8s ease-out, transform 0.8s ease-out';
+          widget.style.opacity = '1';
+          widget.style.transform = 'translateY(0) scale(1)';
+        }
+        
+        // Add entrance animation for threat level number
+        if (threatLevelNumber) {
+          threatLevelNumber.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+          threatLevelNumber.style.opacity = '1';
+          threatLevelNumber.style.transform = 'scale(1)';
+        }
+      }, 50);
+    }
+    
+    // Run on initial page load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', animateThreatGauge);
+    } else {
+      animateThreatGauge();
+    }
+    
+    // Run on Turbo navigation (for Hotwire/Turbo)
+    document.addEventListener('turbo:load', animateThreatGauge);
+    document.addEventListener('turbo:render', animateThreatGauge);
+  </script>
+
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+    <!-- Total URLs -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-purple-600 p-3">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Total URLs</dt>
+              <dd class="text-3xl font-semibold text-gray-900"><%= @urlhaus_count || 0 %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-5 py-3">
+        <%= link_to "View all", abuse_ch_recent_urls_path, class: "text-sm font-medium text-purple-600 hover:text-purple-500" %>
+      </div>
+    </div>
+
+    <!-- Feodo Trackers -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-purple-500 p-3">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Feodo Trackers</dt>
+              <dd class="text-3xl font-semibold text-gray-900"><%= @feodo_ips_count || 0 %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-5 py-3">
+        <span class="text-sm font-medium text-gray-500"><%= @score_components[:feodo_online] || 0 %> Online</span>
+      </div>
+    </div>
+
+    <!-- Malware Payloads -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-purple-400 p-3">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Malware Payloads</dt>
+              <dd class="text-3xl font-semibold text-gray-900"><%= @payloads_count || 0 %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-5 py-3">
+        <%= link_to "View all", abuse_ch_recent_payloads_path, class: "text-sm font-medium text-purple-600 hover:text-purple-500" %>
+      </div>
+    </div>
+
+    <!-- Online URLs -->
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-purple-500 p-3">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-gray-500 truncate">Online URLs</dt>
+              <dd class="text-3xl font-semibold text-gray-900"><%= @urlhaus_online || 0 %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-5 py-3">
+        <%= link_to "View all", abuse_ch_recent_urls_path, class: "text-sm font-medium text-purple-600 hover:text-purple-500" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- abuse.ch Top 5 Threat Intelligence Lists -->
+  <div class="grid grid-cols-1 gap-5 lg:grid-cols-3 mb-8">
+    <!-- Top 5 Malicious URLs -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4">
+        <h3 class="text-lg font-semibold text-white flex items-center">
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+          Top 5 Malicious URLs
+        </h3>
+        <p class="text-xs text-orange-100 mt-1">URLhaus - Recent threats</p>
+      </div>
+      <div class="p-4">
+        <% if @top_urlhaus_urls.present? %>
+          <ul class="space-y-3">
+            <% @top_urlhaus_urls.each_with_index do |url, index| %>
+              <li class="border-l-4 border-orange-500 pl-3 py-2 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-orange-100 text-orange-800 text-xs font-bold">
+                        <%= index + 1 %>
+                      </span>
+                      <% if url[:url_status] == 'online' %>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                          Online
+                        </span>
+                      <% end %>
+                    </div>
+                    <p class="text-xs font-mono text-gray-900 truncate" title="<%= url[:url] %>">
+                      <%= url[:url] %>
+                    </p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs text-gray-500"><%= url[:host] %></span>
+                      <% if url[:threat] %>
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                          <%= url[:threat] %>
+                        </span>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+          <div class="mt-4 pt-4 border-t border-gray-200">
+            <%= link_to abuse_ch_recent_urls_path, class: "text-sm font-medium text-orange-600 hover:text-orange-700 flex items-center justify-center" do %>
+              View all <%= @urlhaus_count %> URLs
+              <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-8 text-gray-400">
+            <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+            <p class="text-sm">No URLs available</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Top 5 Feodo C2 IPs -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4">
+        <h3 class="text-lg font-semibold text-white flex items-center">
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+          </svg>
+          Top 5 Botnet C2 IPs
+        </h3>
+        <p class="text-xs text-red-100 mt-1">Feodo Tracker - Active C&C servers</p>
+      </div>
+      <div class="p-4">
+        <% if @top_feodo_ips.present? %>
+          <ul class="space-y-3">
+            <% @top_feodo_ips.each_with_index do |ip, index| %>
+              <li class="border-l-4 border-red-500 pl-3 py-2 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">
+                        <%= index + 1 %>
+                      </span>
+                      <span class="text-sm font-mono font-semibold text-gray-900">
+                        <%= ip.ip_address %>
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="text-xs text-gray-500">
+                        <%= ip.country_code %>
+                      </span>
+                      <% if ip.metadata&.dig('malware') %>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                          <%= ip.metadata['malware'] %>
+                        </span>
+                      <% end %>
+                      <% if ip.metadata&.dig('status') %>
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium <%= ip.metadata['status'] == 'online' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800' %>">
+                          <%= ip.metadata['status'] %>
+                        </span>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+          <div class="mt-4 pt-4 border-t border-gray-200">
+            <%= link_to abuse_ch_feodo_tracker_path, class: "text-sm font-medium text-red-600 hover:text-red-700 flex items-center justify-center" do %>
+              View all <%= @feodo_ips_count %> C2 IPs
+              <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-8 text-gray-400">
+            <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+            <p class="text-sm">No C2 IPs available</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Top 5 Malware Payloads -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+      <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+        <h3 class="text-lg font-semibold text-white flex items-center">
+          <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+          </svg>
+          Top 5 Malware Payloads
+        </h3>
+        <p class="text-xs text-purple-100 mt-1">URLhaus - Recent malware samples</p>
+      </div>
+      <div class="p-4">
+        <% if @top_payloads.present? %>
+          <ul class="space-y-3">
+            <% @top_payloads.each_with_index do |payload, index| %>
+              <li class="border-l-4 border-purple-500 pl-3 py-2 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start justify-between">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
+                        <%= index + 1 %>
+                      </span>
+                      <% if payload[:signature] %>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                          <%= payload[:signature] %>
+                        </span>
+                      <% end %>
+                    </div>
+                    <p class="text-xs font-mono text-gray-900 truncate" title="<%= payload[:sha256_hash] %>">
+                      SHA256: <%= payload[:sha256_hash]&.first(32) %>...
+                    </p>
+                    <div class="flex items-center gap-2 mt-1">
+                      <% if payload[:file_type] %>
+                        <span class="text-xs text-gray-500"><%= payload[:file_type] %></span>
+                      <% end %>
+                      <% if payload[:file_size] %>
+                        <span class="text-xs text-gray-400">
+                          <%= number_to_human_size(payload[:file_size]) %>
+                        </span>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            <% end %>
+          </ul>
+          <div class="mt-4 pt-4 border-t border-gray-200">
+            <%= link_to abuse_ch_recent_payloads_path, class: "text-sm font-medium text-purple-600 hover:text-purple-700 flex items-center justify-center" do %>
+              View all <%= @payloads_count %> payloads
+              <svg class="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-8 text-gray-400">
+            <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            </svg>
+            <p class="text-sm">No payloads available</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- abuse.ch Threat Intelligence Cards -->
+  <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+    <!-- Feodo Tracker C2 IPs -->
+    <div class="bg-gradient-to-br from-red-600 to-red-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-200">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-white bg-opacity-20 p-3">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-red-100 truncate">Feodo C2 IPs</dt>
+              <dd class="text-3xl font-semibold text-white"><%= @feodo_ips_count %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-black bg-opacity-20 px-5 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-red-100">
+            <% if @feodo_last_updated %>
+              Updated <%= time_ago_in_words(@feodo_last_updated) %> ago
+            <% else %>
+              No data
+            <% end %>
+          </span>
+          <%= link_to "View →", abuse_ch_feodo_tracker_path, class: "text-sm font-medium text-white hover:text-red-100" %>
+        </div>
+      </div>
+    </div>
+
+    <!-- URLhaus Malicious URLs -->
+    <div class="bg-gradient-to-br from-orange-600 to-orange-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-200">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-white bg-opacity-20 p-3">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-orange-100 truncate">Malicious URLs</dt>
+              <dd class="text-3xl font-semibold text-white"><%= @urlhaus_count %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-black bg-opacity-20 px-5 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-orange-100">
+            <%= @urlhaus_online %> currently online
+          </span>
+          <%= link_to "View →", abuse_ch_recent_urls_path, class: "text-sm font-medium text-white hover:text-orange-100" %>
+        </div>
+      </div>
+    </div>
+
+    <!-- abuse.ch Hub -->
+    <div class="bg-gradient-to-br from-green-600 to-green-800 overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-200">
+      <div class="p-5">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-white bg-opacity-20 p-3">
+              <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-5 w-0 flex-1">
+            <dl>
+              <dt class="text-sm font-medium text-green-100 truncate">abuse.ch Feeds</dt>
+              <dd class="text-3xl font-semibold text-white"><%= (@feodo_ips_count + @urlhaus_count) %></dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+      <div class="bg-black bg-opacity-20 px-5 py-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-green-100">
+            No rate limits
+          </span>
+          <%= link_to "Explore →", abuse_ch_index_path, class: "text-sm font-medium text-white hover:text-green-100" %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Threats Over Time (Last 30 Days)</h3>
+        <% if @threats_over_time.present? && @threats_over_time.values.sum > 0 %>
+          <%= line_chart @threats_over_time, colors: ["#9333ea"], height: "300px" %>
+        <% else %>
+          <div class="flex items-center justify-center h-64 text-gray-400">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              <p class="text-sm">No threat data available</p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Indicators Over Time (Last 30 Days)</h3>
+        <% if @indicators_over_time.present? && @indicators_over_time.values.sum > 0 %>
+          <%= line_chart @indicators_over_time, colors: ["#a855f7"], height: "300px" %>
+        <% else %>
+          <div class="flex items-center justify-center h-64 text-gray-400">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              <p class="text-sm">No indicator data available</p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-5 lg:grid-cols-2 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Threats by Type</h3>
+        <% if @threats_by_type.present? && @threats_by_type.values.sum > 0 %>
+          <%= pie_chart @threats_by_type, colors: ["#9333ea", "#a855f7", "#c084fc", "#e9d5ff", "#7c3aed", "#6d28d9", "#5b21b6"], height: "300px" %>
+        <% else %>
+          <div class="flex items-center justify-center h-64 text-gray-400">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/>
+              </svg>
+              <p class="text-sm">No threat type data available</p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Threats by Severity</h3>
+        <% if @threats_by_severity.present? && @threats_by_severity.values.sum > 0 %>
+          <%= column_chart @threats_by_severity, colors: ["#9333ea"], height: "300px" %>
+        <% else %>
+          <div class="flex items-center justify-center h-64 text-gray-400">
+            <div class="text-center">
+              <svg class="mx-auto h-12 w-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              <p class="text-sm">No severity data available</p>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
+      <div>
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Threats</h3>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500">Latest threat intelligence entries</p>
+      </div>
+      <%= link_to "New Threat", new_threat_path, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" %>
+    </div>
+    <div class="border-t border-gray-200">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Severity</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+            <th scope="col" class="relative px-6 py-3"><span class="sr-only">View</span></th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @recent_threats.each do |threat| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"><%= threat.name %></td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                  <%= threat.threat_type&.upcase %>
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <% case threat.severity %>
+                <% when "critical" %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">CRITICAL</span>
+                <% when "high" %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-orange-100 text-orange-800">HIGH</span>
+                <% when "medium" %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">MEDIUM</span>
+                <% when "low" %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">LOW</span>
+                <% else %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">INFO</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= threat.status&.titleize || "N/A" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= time_ago_in_words(threat.created_at) %> ago
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <%= link_to "View", threat, class: "text-purple-600 hover:text-purple-900" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

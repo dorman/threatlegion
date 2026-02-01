@@ -1,0 +1,125 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">abuse.ch Threat Intelligence</h1>
+    <p class="mt-2 text-sm text-gray-600">Free threat intelligence feeds from abuse.ch - No rate limits!</p>
+  </div>
+
+  <!-- Feature Cards -->
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+    <!-- URLhaus Card -->
+    <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-200">
+      <div class="p-6">
+        <div class="flex items-center mb-4">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-purple-600 p-3">
+              <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-900">URLhaus</h3>
+            <p class="text-sm text-gray-500">Malicious URLs</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-4">
+          Database of malicious URLs used for malware distribution. Track phishing sites, exploit kits, and malware download locations.
+        </p>
+        <%= link_to abuse_ch_recent_urls_path, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 w-full justify-center" do %>
+          View Recent URLs
+          <svg class="ml-2 -mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Feodo Tracker Card -->
+    <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-200">
+      <div class="p-6">
+        <div class="flex items-center mb-4">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-red-600 p-3">
+              <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-900">Feodo Tracker</h3>
+            <p class="text-sm text-gray-500">Botnet C2 IPs</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-4">
+          Track botnet Command & Control servers. Includes Emotet, QakBot, and other banking trojans. Currently tracking <%= @feodo_count %> C2 IPs.
+        </p>
+        <%= link_to abuse_ch_feodo_tracker_path, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 w-full justify-center" do %>
+          View C2 IPs
+          <svg class="ml-2 -mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Malware Payloads Card -->
+    <div class="bg-white overflow-hidden shadow-lg rounded-lg hover:shadow-xl transition-shadow duration-200">
+      <div class="p-6">
+        <div class="flex items-center mb-4">
+          <div class="flex-shrink-0">
+            <div class="rounded-md bg-orange-600 p-3">
+              <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <h3 class="text-lg font-semibold text-gray-900">Malware Payloads</h3>
+            <p class="text-sm text-gray-500">File Hashes</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mb-4">
+          Recent malware samples with file hashes, signatures, and VirusTotal links. Track malware distribution and variants.
+        </p>
+        <%= link_to abuse_ch_recent_payloads_path, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 w-full justify-center" do %>
+          View Payloads
+          <svg class="ml-2 -mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Section -->
+  <div class="bg-gradient-to-r from-purple-900 via-purple-800 to-black rounded-xl shadow-2xl overflow-hidden">
+    <div class="px-6 py-8">
+      <h2 class="text-2xl font-bold text-white mb-4">About abuse.ch</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-purple-100">
+        <div>
+          <h3 class="font-semibold text-purple-200 mb-2">✅ No Rate Limits</h3>
+          <p class="text-sm">Unlike commercial APIs, abuse.ch feeds are completely free with no rate limiting. Perfect for continuous threat monitoring.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-purple-200 mb-2">🔄 Auto-Updated</h3>
+          <p class="text-sm">Feodo Tracker updates every 6 hours. URLhaus and payload data cached for 1 hour to ensure fresh intelligence.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-purple-200 mb-2">🎯 High Quality</h3>
+          <p class="text-sm">All data is verified and curated by security researchers. Includes malware families, C2 servers, and active threats.</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-purple-200 mb-2">🔗 Integration Ready</h3>
+          <p class="text-sm">Import IPs and URLs directly into your threat database. Export to indicators for correlation and analysis.</p>
+        </div>
+      </div>
+      <% if @feodo_latest %>
+        <div class="mt-6 pt-6 border-t border-purple-700">
+          <p class="text-sm text-purple-300">
+            Last Feodo Tracker update: <%= @feodo_latest.strftime("%B %d, %Y at %I:%M %p") %>
+          </p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

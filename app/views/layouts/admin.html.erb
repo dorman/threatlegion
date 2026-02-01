@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Admin Panel - ThreatLegion" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_include_tag "application", "data-turbo-track": "reload", type: "module" %>
+    <%= javascript_include_tag "https://cdn.jsdelivr.net/npm/chart.js" %>
+  </head>
+
+  <body class="bg-gray-50">
+    <% if user_signed_in? && current_user.admin? %>
+      <nav class="bg-red-900 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between h-16">
+            <div class="flex">
+              <div class="flex-shrink-0 flex items-center">
+                <%= link_to root_path, class: "flex items-center" do %>
+                  <%= image_tag "threatlegion-logo.png", alt: "ThreatLegion", class: "h-12 w-auto" %>
+                <% end %>
+              </div>
+              <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                <%= link_to "Admin Dashboard", admin_root_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 #{current_page?(admin_root_path) ? 'border-red-400 text-white' : 'border-transparent text-red-200 hover:text-white hover:border-red-300'}" %>
+                <%= link_to "Workflows", admin_workflows_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 #{current_page?(admin_workflows_path) || current_page?(admin_workflow_path(@workflow)) rescue false ? 'border-red-400 text-white' : 'border-transparent text-red-200 hover:text-white hover:border-red-300'}" %>
+                <%= link_to "Threat Feeds", admin_threat_feeds_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 #{current_page?(admin_threat_feeds_path) || current_page?(admin_threat_feed_path(@threat_feed)) rescue false ? 'border-red-400 text-white' : 'border-transparent text-red-200 hover:text-white hover:border-red-300'}" %>
+                <%= link_to "Main Dashboard", dashboard_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-red-200 hover:text-white hover:border-red-300" %>
+                <%= link_to "Threats", threats_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-red-200 hover:text-white hover:border-red-300" %>
+                <%= link_to "Indicators", indicators_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-red-200 hover:text-white hover:border-red-300" %>
+                <%= link_to "Vulnerabilities", vulnerabilities_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-red-200 hover:text-white hover:border-red-300" %>
+                <%= link_to "Threat Feeds", threat_feeds_path, class: "inline-flex items-center px-1 pt-1 text-sm font-medium border-b-2 border-transparent text-red-200 hover:text-white hover:border-red-300" %>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <span class="text-sm text-red-200 mr-4">
+                <%= current_user.email %> 
+                <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full bg-red-700 text-white">
+                  ADMIN
+                </span>
+              </span>
+              <%= button_to "Sign Out", destroy_user_session_path, method: :delete, class: "ml-4 px-4 py-2 rounded-md text-sm font-medium text-white bg-red-700 hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
+            </div>
+          </div>
+        </div>
+      </nav>
+    <% end %>
+
+    <% if notice.present? || alert.present? %>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        <% if notice %>
+          <div class="rounded-md bg-green-50 p-4 mb-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium text-green-800"><%= notice %></p>
+              </div>
+            </div>
+          </div>
+        <% end %>
+        <% if alert %>
+          <div class="rounded-md bg-red-50 p-4 mb-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm font-medium text-red-800"><%= alert %></p>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <main class="py-10">
+      <%= yield %>
+    </main>
+
+    <% if user_signed_in? && current_user.admin? %>
+      <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <p class="text-center text-sm text-gray-500">
+            ThreatLegion Admin Panel &copy; <%= Time.current.year %> - Open Source Cyber Threat Analytics Platform
+          </p>
+          <p class="text-center text-sm text-gray-500 mt-2 flex items-center justify-center">
+            Proudly built with
+            <svg class="h-4 w-4 text-red-600 mx-1" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 0L24 7v10l-12 7L0 17V7L12 0zm0 2.18L2.18 7.5 12 12.82 21.82 7.5 12 2.18zm0 13.64l-9.82-5.32v8.64L12 22l9.82-4.86v-8.64L12 15.82z"/>
+            </svg>
+            Ruby on Rails
+          </p>
+          <p class="text-center text-xs text-gray-400 mt-2">
+            Version v0.0.1
+          </p>
+        </div>
+      </footer>
+    <% end %>
+  </body>
+</html>

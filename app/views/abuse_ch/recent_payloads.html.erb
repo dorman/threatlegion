@@ -1,0 +1,120 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">URLhaus - Recent Malware Payloads</h1>
+        <p class="mt-2 text-sm text-gray-600">Latest malware samples from abuse.ch URLhaus database</p>
+      </div>
+      <%= link_to "← Back to abuse.ch", abuse_ch_index_path, class: "text-purple-600 hover:text-purple-900" %>
+    </div>
+  </div>
+
+  <% if @error %>
+    <div class="rounded-md bg-yellow-50 border border-yellow-200 p-4 mb-6">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+          </svg>
+        </div>
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-yellow-800">API Authentication Required</h3>
+          <div class="mt-2 text-sm text-yellow-700">
+            <p><%= @error %></p>
+            <% if @error.include?('API key required') || @error.include?('401') || @error.include?('Unauthorized') %>
+              <p class="mt-2">
+                The URLhaus payloads endpoint requires an API key from abuse.ch. 
+                To enable this feature, please:
+              </p>
+              <ul class="list-disc list-inside mt-2 space-y-1">
+                <li>Register for a URLhaus API key at <a href="https://urlhaus.abuse.ch/api/" target="_blank" class="underline">urlhaus.abuse.ch/api</a></li>
+                <li>Set the <code class="bg-yellow-100 px-1 rounded">ABUSECH_API_KEY</code> environment variable</li>
+                <li>Restart your application server</li>
+              </ul>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <% if @payloads.present? %>
+    <!-- Payloads Table -->
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+      <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+        <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Malware Payloads</h3>
+        <p class="mt-1 max-w-2xl text-sm text-gray-500">
+          Latest <%= @total_count %> malware samples reported to URLhaus
+        </p>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SHA256 Hash</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Type</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Signature</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Seen</th>
+              <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @payloads.each do |payload| %>
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-sm font-mono text-gray-900">
+                  <div class="max-w-xs truncate" title="<%= payload[:sha256_hash] %>">
+                    <%= payload[:sha256_hash] %>
+                  </div>
+                  <div class="text-xs text-gray-500 mt-1">
+                    MD5: <%= payload[:md5_hash] %>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= payload[:file_type] || 'Unknown' %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= number_to_human_size(payload[:file_size]) if payload[:file_size] %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <% if payload[:signature] %>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <%= payload[:signature] %>
+                    </span>
+                  <% else %>
+                    <span class="text-gray-400">-</span>
+                  <% end %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= Time.parse(payload[:firstseen]).strftime("%b %d, %Y %H:%M") rescue payload[:firstseen] %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <% if payload[:urlhaus_download] %>
+                    <a href="<%= payload[:urlhaus_download] %>" target="_blank" class="text-purple-600 hover:text-purple-900 mr-3">
+                      Download
+                    </a>
+                  <% end %>
+                  <% if payload[:virustotal] %>
+                    <a href="<%= payload[:virustotal] %>" target="_blank" class="text-blue-600 hover:text-blue-900">
+                      VirusTotal
+                    </a>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% else %>
+    <div class="bg-white shadow sm:rounded-lg">
+      <div class="px-4 py-5 sm:p-6 text-center">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No payloads available</h3>
+        <p class="mt-1 text-sm text-gray-500">Unable to fetch recent malware payloads from URLhaus.</p>
+      </div>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,67 @@
+<%= form_with(model: threat, class: "space-y-6") do |form| %>
+  <% if threat.errors.any? %>
+    <div class="rounded-md bg-red-50 p-4">
+      <div class="flex">
+        <div class="ml-3">
+          <h3 class="text-sm font-medium text-red-800">
+            <%= pluralize(threat.errors.count, "error") %> prohibited this threat from being saved:
+          </h3>
+          <div class="mt-2 text-sm text-red-700">
+            <ul class="list-disc pl-5 space-y-1">
+              <% threat.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <div class="sm:col-span-2">
+      <%= form.label :name, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_field :name, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm", placeholder: "e.g., APT29 Campaign" %>
+    </div>
+
+    <div>
+      <%= form.label :threat_type, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.select :threat_type, options_for_select([["Select Type", ""], ["Malware", "malware"], ["APT", "apt"], ["Phishing", "phishing"], ["Ransomware", "ransomware"], ["Botnet", "botnet"], ["Exploit", "exploit"], ["DDoS", "ddos"]], threat.threat_type), {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" %>
+    </div>
+
+    <div>
+      <%= form.label :severity, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.select :severity, options_for_select([["Select Severity", ""], ["Critical", "critical"], ["High", "high"], ["Medium", "medium"], ["Low", "low"], ["Info", "info"]], threat.severity), {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" %>
+    </div>
+
+    <div>
+      <%= form.label :status, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.select :status, options_for_select([["Select Status", ""], ["Active", "active"], ["Investigating", "investigating"], ["Mitigated", "mitigated"], ["Closed", "closed"]], threat.status), {}, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" %>
+    </div>
+
+    <div>
+      <%= form.label :confidence_score, "Confidence Score (0-100)", class: "block text-sm font-medium text-gray-700" %>
+      <%= form.number_field :confidence_score, min: 0, max: 100, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" %>
+    </div>
+
+    <div>
+      <%= form.label :first_seen, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.datetime_local_field :first_seen, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" %>
+    </div>
+
+    <div>
+      <%= form.label :last_seen, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.datetime_local_field :last_seen, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm" %>
+    </div>
+
+    <div class="sm:col-span-2">
+      <%= form.label :description, class: "block text-sm font-medium text-gray-700" %>
+      <%= form.text_area :description, rows: 4, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm", placeholder: "Detailed description of the threat..." %>
+    </div>
+  </div>
+
+  <div class="flex justify-end space-x-3">
+    <%= link_to "Cancel", threats_path, class: "inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" %>
+    <%= form.submit class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500" %>
+  </div>
+<% end %>

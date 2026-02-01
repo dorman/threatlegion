@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Custom animations for threat severity widget */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 20px 10px rgba(239, 68, 68, 0.4);
+  }
+}
+
+@keyframes pulse-glow-orange {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 20px 10px rgba(249, 115, 22, 0.4);
+  }
+}
+
+@keyframes gauge-fill {
+  from {
+    stroke-dashoffset: 502.65; /* Full circle */
+  }
+  to {
+    stroke-dashoffset: var(--target-offset);
+  }
+}
+
+@keyframes number-count {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Critical state pulsing */
+.threat-critical {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.threat-critical-orange {
+  animation: pulse-glow-orange 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth color transitions */
+.threat-transition {
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}

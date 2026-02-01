@@ -1,0 +1,231 @@
+<div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="mb-6 flex justify-between items-center">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900"><%= @workflow.name %></h1>
+      <p class="mt-2 text-sm text-gray-600"><%= @workflow.description %></p>
+    </div>
+    <div class="flex space-x-3">
+      <%= link_to "Back to Workflows", admin_workflows_path, class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50" %>
+      <%= link_to "View Results", results_admin_workflow_path(@workflow), class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700" %>
+      <%= button_to "Execute Workflow", execute_admin_workflow_path(@workflow), method: :post, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700" %>
+    </div>
+  </div>
+
+  <!-- Workflow Builder -->
+  <div class="bg-white shadow rounded-lg mb-6">
+    <div id="workflow-builder" 
+         data-workflow-id="<%= @workflow.id %>"
+         data-workflow-data="<%= @workflow_data.to_json %>"
+         data-services="<%= @service_info.to_json %>"
+         data-update-url="<%= admin_workflow_path(@workflow) %>">
+      <!-- React Flow will mount here -->
+      <div id="react-flow-root" style="height: 600px; width: 100%;"></div>
+    </div>
+  </div>
+
+  <!-- Recent Executions -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Recent Executions</h3>
+    </div>
+    <div class="border-t border-gray-200">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Records</th>
+            <th scope="col" class="relative px-6 py-3"><span class="sr-only">View</span></th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @executions.each do |execution| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <% case execution.status %>
+                <% when 'completed' %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
+                <% when 'failed' %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Failed</span>
+                <% when 'running' %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Running</span>
+                <% else %>
+                  <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Pending</span>
+                <% end %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= execution.started_at ? time_ago_in_words(execution.started_at) + " ago" : "N/A" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= execution.duration ? "#{execution.duration.round(2)}s" : "N/A" %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= execution.records_processed || 0 %>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <%= link_to "View", results_admin_workflow_path(@workflow, execution_id: execution.id), class: "text-red-600 hover:text-red-900" %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<%= javascript_include_tag "https://unpkg.com/react@18/umd/react.production.min.js" %>
+<%= javascript_include_tag "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" %>
+<%= javascript_include_tag "https://unpkg.com/reactflow@11/dist/umd/index.js" %>
+
+<script>
+  // Simple workflow builder using React Flow
+  (function() {
+    const builderEl = document.getElementById('workflow-builder');
+    if (!builderEl) return;
+
+    const workflowData = JSON.parse(builderEl.dataset.workflowData || '{"nodes":[],"edges":[]}');
+    const services = JSON.parse(builderEl.dataset.services || '{}');
+    const updateUrl = builderEl.dataset.updateUrl;
+
+    // React Flow components
+    const { React, ReactDOM } = window;
+    const ReactFlow = window.ReactFlow;
+
+    if (!React || !ReactDOM || !ReactFlow) {
+      console.error('React Flow not loaded');
+      return;
+    }
+
+    const { useCallback, useState, useRef } = React;
+    const { ReactFlowProvider, useReactFlow, Background, Controls, MiniMap } = ReactFlow;
+
+    // Custom node types
+    const ServiceNode = ({ data, id }) => {
+      return (
+        React.createElement('div', {
+          className: 'px-4 py-2 shadow-md rounded-md bg-white border-2 border-red-500',
+          style: { width: 200 }
+        }, [
+          React.createElement('div', { key: 'label', className: 'font-bold' }, data.label),
+          React.createElement('div', { key: 'service', className: 'text-xs text-gray-500' }, data.service_name)
+        ])
+      );
+    };
+
+    // Main workflow builder component
+    const WorkflowBuilder = () => {
+      const [nodes, setNodes] = useState(workflowData.nodes || []);
+      const [edges, setEdges] = useState(workflowData.edges || []);
+      const reactFlowWrapper = useRef(null);
+      const { project } = useReactFlow();
+
+      const onNodesChange = useCallback((changes) => {
+        setNodes((nds) => {
+          const updated = nds.map((node) => {
+            const change = changes.find((c) => c.id === node.id);
+            if (change && change.type === 'position') {
+              return { ...node, position: change.position };
+            }
+            return node;
+          });
+          saveWorkflow(updated, edges);
+          return updated;
+        });
+      }, [edges]);
+
+      const onEdgesChange = useCallback((changes) => {
+        setEdges((es) => {
+          const updated = es.map((edge) => {
+            const change = changes.find((c) => c.id === edge.id);
+            return change ? { ...edge, ...change } : edge;
+          });
+          saveWorkflow(nodes, updated);
+          return updated;
+        });
+      }, [nodes]);
+
+      const onConnect = useCallback((params) => {
+        setEdges((eds) => {
+          const newEdges = [...eds, params];
+          saveWorkflow(nodes, newEdges);
+          return newEdges;
+        });
+      }, [nodes]);
+
+      const onDragOver = useCallback((event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+      }, []);
+
+      const onDrop = useCallback((event) => {
+        event.preventDefault();
+        const serviceName = event.dataTransfer.getData('application/reactflow');
+        if (!serviceName) return;
+
+        const position = project({ x: event.clientX, y: event.clientY });
+        const newNode = {
+          id: `node-${Date.now()}`,
+          type: 'service',
+          position,
+          data: {
+            label: services[serviceName]?.name || serviceName,
+            service_name: serviceName,
+            config: {}
+          }
+        };
+
+        setNodes((nds) => {
+          const updated = [...nds, newNode];
+          saveWorkflow(updated, edges);
+          return updated;
+        });
+      }, [project, edges, services]);
+
+      const saveWorkflow = (nds, eds) => {
+        fetch(updateUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+          },
+          body: JSON.stringify({
+            workflow: {
+              workflow_data: {
+                nodes: nds,
+                edges: eds
+              }
+            }
+          })
+        }).catch(err => console.error('Failed to save workflow:', err));
+      };
+
+      return React.createElement('div', { style: { width: '100%', height: '600px' } }, [
+        React.createElement(ReactFlow.default, {
+          key: 'flow',
+          nodes,
+          edges,
+          onNodesChange,
+          onEdgesChange,
+          onConnect,
+          onDrop,
+          onDragOver,
+          nodeTypes: { service: ServiceNode },
+          fitView: true
+        }, [
+          React.createElement(Background, { key: 'bg' }),
+          React.createElement(Controls, { key: 'controls' }),
+          React.createElement(MiniMap, { key: 'minimap' })
+        ])
+      ]);
+    };
+
+    // Render
+    const root = ReactDOM.createRoot(document.getElementById('react-flow-root'));
+    root.render(
+      React.createElement(ReactFlowProvider, null,
+        React.createElement(WorkflowBuilder)
+      )
+    );
+  })();
+</script>
