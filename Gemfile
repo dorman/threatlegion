@@ -38,6 +38,7 @@ gem "rack-cors"
 
 # Background jobs
 gem "sidekiq"
+gem "sidekiq-cron"
 
 # Charts and visualization
 gem "chartkick"

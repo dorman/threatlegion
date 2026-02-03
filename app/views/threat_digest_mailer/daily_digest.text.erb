@@ -1,0 +1,34 @@
+ThreatLegion Daily Digest
+<%= @date %>
+
+═══════════════════════════════════════════════════════════
+
+STATISTICS
+──────────
+Total URLs: <%= @total_urls %>
+Online: <%= @online_urls %>
+Offline: <%= @total_urls - @online_urls %>
+
+═══════════════════════════════════════════════════════════
+
+TOP MALICIOUS URLS FROM ABUSE.CH
+─────────────────────────────────
+
+<% @urls.each_with_index do |url, index| %>
+<%= index + 1 %>. <%= url[:url] %>
+   Status: <%= url[:url_status].upcase %>
+   <% if url[:threat].present? %>Threat: <%= url[:threat] %><% end %>
+   <% if url[:host].present? && url[:host] != 'Unknown' %>Host: <%= url[:host] %><% end %>
+   <% if url[:date_added].present? %>Added: <%= url[:date_added] %><% end %>
+   <% if url[:reporter].present? %>Reporter: <%= url[:reporter] %><% end %>
+   <% if url[:tags].present? && url[:tags].any? %>Tags: <%= url[:tags].join(', ') %><% end %>
+   <% if url[:urlhaus_link].present? %>URLhaus: <%= url[:urlhaus_link] %><% end %>
+
+<% end %>
+
+═══════════════════════════════════════════════════════════
+
+This is an automated daily digest from ThreatLegion.
+To view more threats, visit: <%= root_url %>
+
+ThreatLegion v0.0.1 - Open Source Cyber Threat Analytics Platform

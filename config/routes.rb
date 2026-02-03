@@ -30,6 +30,7 @@ Rails.application.routes.draw do
       member do
         post :execute
         get :results
+        get :node_data
       end
       collection do
         get :service_info

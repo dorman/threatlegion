@@ -7,6 +7,8 @@ class Workflow < ApplicationRecord
   validates :name, presence: true
   validates :status, inclusion: { in: %w[draft active archived] }
 
+  serialize :config, coder: JSON
+
   scope :active, -> { where(status: 'active') }
   scope :draft, -> { where(status: 'draft') }
 
@@ -27,6 +29,11 @@ class Workflow < ApplicationRecord
       workflow_connections.destroy_all
 
       nodes_data.each do |node_data|
+        # Convert config to hash if it's ActionController::Parameters
+        config = node_data['data']['config'] || {}
+        config = config.to_h if config.respond_to?(:to_h)
+        config = {} unless config.is_a?(Hash)
+        
         workflow_nodes.create!(
           node_id: node_data['id'],
           node_type: node_data['type'],
@@ -34,7 +41,7 @@ class Workflow < ApplicationRecord
           label: node_data['data']['label'],
           position_x: node_data['position']['x'],
           position_y: node_data['position']['y'],
-          config: node_data['data']['config'] || {}
+          config: config
         )
       end
 

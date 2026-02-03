@@ -1,6 +1,6 @@
 module Admin
   class WorkflowsController < BaseController
-    before_action :set_workflow, only: [:show, :edit, :update, :destroy, :execute, :results]
+    before_action :set_workflow, only: [:show, :edit, :update, :destroy, :execute, :results, :node_data]
 
     def index
       @workflows = Workflow.order(created_at: :desc).page(params[:page])
@@ -22,6 +22,12 @@ module Admin
     def create
       @workflow = current_user.workflows.build(workflow_params)
       @workflow.status = 'draft'
+      
+      # Store API keys in config
+      api_keys = {}
+      api_keys['abuse_ch_api_key'] = params[:workflow][:abuse_ch_api_key] if params[:workflow][:abuse_ch_api_key].present?
+      api_keys['abuseipdb_api_key'] = params[:workflow][:abuseipdb_api_key] if params[:workflow][:abuseipdb_api_key].present?
+      @workflow.config = (@workflow.config || {}).merge(api_keys) if api_keys.any?
 
       if @workflow.save
         redirect_to admin_workflow_path(@workflow), notice: 'Workflow created successfully.'
@@ -40,14 +46,24 @@ module Admin
     def update
       if params[:workflow] && params[:workflow][:workflow_data]
         # Update from React Flow format (JSON request)
-        workflow_data = params[:workflow][:workflow_data]
-        nodes_data = workflow_data[:nodes] || []
-        edges_data = workflow_data[:edges] || []
+        begin
+          # Access workflow_data directly from params without strong parameters
+          workflow_data = params[:workflow][:workflow_data]
+          nodes_data = workflow_data[:nodes] || workflow_data['nodes'] || []
+          edges_data = workflow_data[:edges] || workflow_data['edges'] || []
 
-        @workflow.from_react_flow_format(nodes_data, edges_data)
-        @workflow.update(workflow_params.except(:workflow_data))
+          @workflow.from_react_flow_format(nodes_data, edges_data)
+          
+          # Only update other permitted params if they exist
+          other_params = params[:workflow].except(:workflow_data).permit(:name, :description, :status, :config)
+          @workflow.update(other_params) if other_params.any?
 
-        render json: { success: true, message: 'Workflow updated successfully.' }
+          render json: { success: true, message: 'Workflow updated successfully.' }
+        rescue => e
+          Rails.logger.error "Error updating workflow: #{e.message}"
+          Rails.logger.error e.backtrace.join("\n")
+          render json: { success: false, error: e.message }, status: :unprocessable_entity
+        end
       elsif @workflow.update(workflow_params)
         redirect_to admin_workflow_path(@workflow), notice: 'Workflow updated successfully.'
       else
@@ -88,6 +104,48 @@ module Admin
         service: info,
         methods: methods
       }
+    end
+
+    def node_data
+      node_id = params[:node_id]
+      node = @workflow.workflow_nodes.find_by(node_id: node_id)
+      
+      unless node
+        render json: { error: 'Node not found' }, status: :not_found
+        return
+      end
+
+      # Get the most recent execution for this workflow
+      execution = @workflow.workflow_executions.recent.first
+      
+      if execution && execution.result_data
+        # Find node output in execution results
+        node_output = execution.result_data.dig('node_outputs', node_id) || 
+                      execution.result_data.dig('results', node_id)
+        
+        render json: {
+          node: {
+            id: node.node_id,
+            label: node.label,
+            service_name: node.service_name,
+            node_type: node.node_type
+          },
+          data: node_output || [],
+          execution_status: execution.status,
+          execution_id: execution.id
+        }
+      else
+        render json: {
+          node: {
+            id: node.node_id,
+            label: node.label,
+            service_name: node.service_name,
+            node_type: node.node_type
+          },
+          data: [],
+          message: 'No execution data available. Execute the workflow to see results.'
+        }
+      end
     end
 
     private
