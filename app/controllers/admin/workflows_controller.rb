@@ -154,9 +154,21 @@ module Admin
       node_id = params[:node_id]
       node = @workflow.workflow_nodes.find_by(node_id: node_id)
 
+      # If node doesn't exist in database, create it
       unless node
-        render json: { error: 'Node not found' }, status: :not_found
-        return
+        Rails.logger.info "Node #{node_id} not found, creating it..."
+        label = params[:label]
+        service_name = params[:service_name] || params[:config]&.dig(:service_name) || label&.downcase&.gsub(/[.\s]+/, '_')
+
+        node = @workflow.workflow_nodes.create!(
+          node_id: node_id,
+          node_type: 'service',
+          service_name: service_name,
+          label: label || 'New Node',
+          position_x: 100,
+          position_y: 100,
+          config: {}
+        )
       end
 
       begin

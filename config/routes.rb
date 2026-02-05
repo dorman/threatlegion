@@ -16,7 +16,6 @@ Rails.application.routes.draw do
   end
 
   resources :vulnerabilities, only: [:index, :show, :edit, :update, :destroy]
-  resources :threat_feeds
 
   get "dashboard", to: "dashboard#index"
   get "analytics", to: "dashboard#analytics"
@@ -38,15 +37,6 @@ Rails.application.routes.draw do
       end
     end
 
-    resources :threat_feeds do
-      member do
-        post :fetch
-        post :toggle
-      end
-      collection do
-        post :bulk_refresh
-      end
-    end
   end
 
   # abuse.ch integration (URLhaus & Feodo Tracker)

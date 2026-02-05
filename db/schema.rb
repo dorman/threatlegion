@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_02_01_022432) do
+ActiveRecord::Schema[7.2].define(version: 2026_02_05_235119) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -49,17 +49,6 @@ ActiveRecord::Schema[7.2].define(version: 2026_02_01_022432) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["threat_id"], name: "index_mitre_attacks_on_threat_id"
-  end
-
-  create_table "threat_feeds", force: :cascade do |t|
-    t.string "name"
-    t.string "url"
-    t.string "feed_type"
-    t.boolean "enabled"
-    t.datetime "last_fetched"
-    t.integer "refresh_interval"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
   end
 
   create_table "threat_scores", force: :cascade do |t|

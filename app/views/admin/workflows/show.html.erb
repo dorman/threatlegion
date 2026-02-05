@@ -208,6 +208,7 @@
   </div>
 </div>
 
+<%= stylesheet_link_tag "https://unpkg.com/reactflow@11/dist/style.css" %>
 <%= javascript_include_tag "https://unpkg.com/react@18/umd/react.development.js" %>
 <%= javascript_include_tag "https://unpkg.com/react-dom@18/umd/react-dom.development.js" %>
 <%= javascript_include_tag "https://unpkg.com/reactflow@11/dist/umd/index.js" %>
@@ -232,343 +233,279 @@
       return;
     }
 
-    const { useCallback, useState, useRef, useEffect } = React;
-    
-    // React Flow v11 / @xyflow/react UMD build structure
-    // Check what's available
-    console.log('ReactFlow/XYFlow object:', window.ReactFlow || window.XYFlow || ReactFlow);
-    const FlowLib = window.ReactFlow || window.XYFlow || ReactFlow;
-    console.log('FlowLib keys:', Object.keys(FlowLib || {}));
-    
-    // Try different possible structures
-    const ReactFlowProvider = FlowLib?.ReactFlowProvider || FlowLib?.default?.ReactFlowProvider;
-    const useReactFlow = FlowLib?.useReactFlow || FlowLib?.default?.useReactFlow;
-    const useNodesState = FlowLib?.useNodesState || FlowLib?.default?.useNodesState;
-    const useEdgesState = FlowLib?.useEdgesState || FlowLib?.default?.useEdgesState;
-    const addEdge = FlowLib?.addEdge || FlowLib?.default?.addEdge;
-    const Background = FlowLib?.Background || FlowLib?.default?.Background;
-    const Controls = FlowLib?.Controls || FlowLib?.default?.Controls;
-    const MiniMap = FlowLib?.MiniMap || FlowLib?.default?.MiniMap;
-    const Handle = FlowLib?.Handle || FlowLib?.default?.Handle;
-    const Position = FlowLib?.Position || FlowLib?.default?.Position || {
-      Left: 'left',
-      Right: 'right',
-      Top: 'top',
-      Bottom: 'bottom'
-    };
-    const ReactFlowComponent = FlowLib?.ReactFlow || FlowLib?.default?.ReactFlow || FlowLib?.default;
+    const { useCallback, useState, useRef, useEffect, useMemo } = React;
 
-    console.log('React Flow hooks available:', {
-      useNodesState: !!useNodesState,
-      useEdgesState: !!useEdgesState,
-      addEdge: !!addEdge
+    // React Flow v11 UMD build - get components
+    const FlowLib = window.ReactFlow;
+    console.log('ReactFlow keys:', Object.keys(FlowLib || {}));
+
+    const ReactFlowProvider = FlowLib.ReactFlowProvider;
+    const useReactFlow = FlowLib.useReactFlow;
+    const applyNodeChanges = FlowLib.applyNodeChanges;
+    const applyEdgeChanges = FlowLib.applyEdgeChanges;
+    const addEdge = FlowLib.addEdge;
+    const Background = FlowLib.Background;
+    const Controls = FlowLib.Controls;
+    const MiniMap = FlowLib.MiniMap;
+    const Handle = FlowLib.Handle;
+    const Position = FlowLib.Position || { Left: 'left', Right: 'right', Top: 'top', Bottom: 'bottom' };
+    const ReactFlowComponent = FlowLib.default || FlowLib.ReactFlow;
+
+    console.log('React Flow components:', {
+      ReactFlowProvider: !!ReactFlowProvider,
+      applyNodeChanges: !!applyNodeChanges,
+      applyEdgeChanges: !!applyEdgeChanges,
+      ReactFlowComponent: !!ReactFlowComponent
     });
-    
-    // Validate components
-    if (!ReactFlowProvider || !useReactFlow || !Background || !Controls || !Handle || !ReactFlowComponent) {
-      console.error('Missing React Flow components:', {
-        ReactFlowProvider: !!ReactFlowProvider,
-        useReactFlow: !!useReactFlow,
-        Background: !!Background,
-        Controls: !!Controls,
-        Handle: !!Handle,
-        ReactFlowComponent: !!ReactFlowComponent
-      });
-      console.error('Available ReactFlow keys:', Object.keys(ReactFlow || {}));
-    } else {
-      console.log('All React Flow components loaded successfully');
-    }
 
-    // Enhanced Service Node with click handler and config button
-    const ServiceNode = ({ data, id }) => {
-      // Handle clicking the node body to view data
-      const handleViewData = (e) => {
-        e.stopPropagation();
-        const modal = document.getElementById('node-data-modal');
-        const title = document.getElementById('node-data-title');
-        const content = document.getElementById('node-data-content');
+    // Global state for node config modal
+    window.nodeConfigState = {};
 
-        if (!modal || !title || !content) {
-          console.error('Modal elements not found');
-          return;
-        }
-
-        title.textContent = `${data.label || 'Node'} - Data Output`;
-        content.innerHTML = '<div class="text-center py-8 text-gray-500"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div><p class="mt-2">Loading data...</p></div>';
-        modal.classList.remove('hidden');
-
-        // Fetch node data
-        const url = `${nodeDataUrlTemplate}?node_id=${encodeURIComponent(id)}`;
-        fetch(url, {
-          headers: {
-            'Accept': 'application/json',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
-          }
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(responseData => {
-          if (responseData.error) {
-            content.innerHTML = `<div class="text-center py-8 text-red-600">${responseData.error}</div>`;
-            return;
-          }
-
-          let html = '';
-          if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
-            html = '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>';
-            const firstItem = responseData.data[0];
-            const keys = Object.keys(firstItem);
-            keys.forEach(key => {
-              html += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${key}</th>`;
-            });
-            html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
-
-            responseData.data.slice(0, 100).forEach((item) => {
-              html += '<tr class="hover:bg-gray-50">';
-              keys.forEach(key => {
-                let value = item[key];
-                if (value === undefined || value === null) {
-                  value = '';
-                } else if (typeof value === 'object') {
-                  value = JSON.stringify(value);
-                } else {
-                  value = String(value);
-                }
-                // Escape HTML
-                value = value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                html += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${value}</td>`;
-              });
-              html += '</tr>';
-            });
-            html += '</tbody></table></div>';
-            if (responseData.data.length > 100) {
-              html += `<div class="mt-4 text-sm text-gray-500 text-center">Showing first 100 of ${responseData.data.length} records</div>`;
-            }
-          } else {
-            html = `<div class="text-center py-8 text-gray-500">${responseData.message || 'No data available. Execute the workflow to see results.'}</div>`;
-          }
-          content.innerHTML = html;
-        })
-        .catch(error => {
-          console.error('Error loading node data:', error);
-          content.innerHTML = `<div class="text-center py-8 text-red-600">Error loading data: ${error.message}</div>`;
-        });
-      };
-
-      // Handle clicking the config/gear button
-      const handleOpenConfig = (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        console.log('Config button clicked for node:', id, data);
-        if (window.openNodeConfigModal) {
-          window.openNodeConfigModal(id, data);
-        } else {
-          console.error('openNodeConfigModal not defined yet');
-          alert('Config modal not ready. Please try again.');
-        }
-      };
-
-      const handlePosition = Position?.Right || 'right';
-      const targetPosition = Position?.Left || 'left';
-
-      // Get configured method name to display
+    // Simple custom node using default React Flow patterns
+    function ServiceNode({ data, id }) {
       const configuredMethod = data.config?.method;
-      const methodDisplay = configuredMethod ? `Method: ${configuredMethod}` : 'Click gear to configure';
 
       return React.createElement('div', {
-        className: 'px-4 py-3 shadow-lg rounded-lg bg-white border-2 border-red-500 hover:border-red-600 transition-all',
         style: {
-          width: 240,
-          minHeight: 100,
-          position: 'relative',
-          zIndex: 1,
-          boxSizing: 'border-box',
-          backgroundColor: 'white'
-        },
-        'data-node-id': id
+          padding: 10,
+          borderRadius: 5,
+          background: 'white',
+          border: '2px solid #ef4444',
+          minWidth: 150
+        }
       }, [
-        Handle ? React.createElement(Handle, {
-          key: 'source',
-          type: 'source',
-          position: handlePosition,
-          id: 'source',
-          className: 'w-3 h-3 bg-red-500',
-          style: { width: '12px', height: '12px', borderRadius: '50%' }
-        }) : null,
-        Handle ? React.createElement(Handle, {
+        // Handles for connections
+        Handle && React.createElement(Handle, {
           key: 'target',
           type: 'target',
-          position: targetPosition,
-          id: 'target',
-          className: 'w-3 h-3 bg-blue-500',
-          style: { width: '12px', height: '12px', borderRadius: '50%' }
-        }) : null,
-        // Header with icon and config button
-        React.createElement('div', { key: 'header', className: 'flex items-center justify-between mb-2' }, [
-          React.createElement('div', { key: 'icon-wrapper', className: 'flex items-center space-x-2' }, [
-            React.createElement('div', { key: 'icon-bg', className: 'w-8 h-8 bg-red-100 rounded flex items-center justify-center' }, [
-              React.createElement('svg', { key: 'icon-svg', className: 'w-5 h-5 text-red-600', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-                React.createElement('path', { key: 'path', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13 10V3L4 14h7v7l9-11h-7z' })
-              ])
-            ])
-          ]),
-          // Config/Gear button
-          React.createElement('button', {
-            key: 'config-btn',
-            onClick: handleOpenConfig,
-            className: 'p-1.5 rounded-full hover:bg-gray-100 transition-colors',
-            title: 'Configure node',
-            style: { cursor: 'pointer' }
+          position: Position.Left,
+          style: { background: '#3b82f6' }
+        }),
+        Handle && React.createElement(Handle, {
+          key: 'source',
+          type: 'source',
+          position: Position.Right,
+          style: { background: '#ef4444' }
+        }),
+        // Content
+        React.createElement('div', { key: 'content' }, [
+          React.createElement('div', {
+            key: 'header',
+            style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
           }, [
-            React.createElement('svg', {
-              key: 'gear-icon',
-              className: 'w-5 h-5 text-gray-500 hover:text-gray-700',
-              fill: 'none',
-              stroke: 'currentColor',
-              viewBox: '0 0 24 24'
-            }, [
-              React.createElement('path', {
-                key: 'gear-path',
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round',
-                strokeWidth: '2',
-                d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
-              }),
-              React.createElement('path', {
-                key: 'gear-center',
-                strokeLinecap: 'round',
-                strokeLinejoin: 'round',
-                strokeWidth: '2',
-                d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z'
-              })
-            ])
-          ])
-        ]),
-        // Node label
-        React.createElement('div', { key: 'label', className: 'font-bold text-gray-900 text-sm' }, data.label || 'Untitled'),
-        // Service name
-        React.createElement('div', { key: 'service', className: 'text-xs text-gray-500 mt-1' }, data.service_name || ''),
-        // Method indicator
-        React.createElement('div', {
-          key: 'method',
-          className: `text-xs mt-1 ${configuredMethod ? 'text-green-600' : 'text-gray-400 italic'}`
-        }, methodDisplay),
-        // View data button
-        React.createElement('button', {
-          key: 'view-data-btn',
-          onClick: handleViewData,
-          className: 'mt-2 w-full text-xs text-center py-1 px-2 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 text-gray-600 transition-colors',
-          style: { cursor: 'pointer' }
-        }, 'View Output Data')
-      ]);
-    };
+            React.createElement('strong', { key: 'label' }, data.label || 'Node'),
+            React.createElement('span', {
+              key: 'config',
+              className: 'nodrag',
+              onClick: (e) => {
+                e.stopPropagation();
+                console.log('Config clicked:', id);
+                const event = new CustomEvent('openNodeConfig', { detail: { nodeId: id, nodeData: data } });
+                document.dispatchEvent(event);
+              },
+              style: { cursor: 'pointer', padding: '2px 6px' }
+            }, '⚙️')
+          ]),
+          React.createElement('div', {
+            key: 'service',
+            style: { fontSize: 11, color: '#666', marginTop: 4 }
+          }, data.service_name || ''),
+          React.createElement('div', {
+            key: 'method',
+            style: { fontSize: 10, color: '#999', marginTop: 2 }
+          }, configuredMethod ? `Method: ${configuredMethod}` : 'Configure →'),
+          React.createElement('div', {
+            key: 'view',
+            className: 'nodrag',
+            onClick: (e) => {
+              e.stopPropagation();
+              console.log('View clicked:', id);
+              const modal = document.getElementById('node-data-modal');
+              const contentDiv = document.getElementById('node-data-content');
+              if (modal) {
+                document.getElementById('node-data-title').textContent = data.label + ' - Output';
+                // Reset to loading state
+                contentDiv.innerHTML = `
+                  <div class="text-center py-8 text-gray-500">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                    <p class="mt-2">Loading data...</p>
+                  </div>
+                `;
+                modal.classList.remove('hidden');
 
-    // Define nodeTypes outside component to prevent re-creation on each render
+                // Fetch node data from backend
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                fetch(`${nodeDataUrlTemplate}?node_id=${encodeURIComponent(id)}`, {
+                  method: 'GET',
+                  headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                  }
+                })
+                .then(response => response.json())
+                .then(result => {
+                  if (result.error) {
+                    contentDiv.innerHTML = `
+                      <div class="text-center py-8 text-red-500">
+                        <p>Error: ${result.error}</p>
+                      </div>
+                    `;
+                    return;
+                  }
+
+                  // Build the display content
+                  let html = '';
+
+                  // Show node config summary
+                  if (result.node) {
+                    html += `<div class="mb-4 p-3 bg-gray-50 rounded-lg">
+                      <h4 class="font-medium text-gray-700 mb-2">Node Configuration</h4>
+                      <p class="text-sm text-gray-600"><strong>Service:</strong> ${result.node.service_name || 'N/A'}</p>
+                      <p class="text-sm text-gray-600"><strong>Method:</strong> ${result.node.config?.method || 'Not configured'}</p>
+                    </div>`;
+                  }
+
+                  // Show message if no data
+                  if (result.message) {
+                    html += `<div class="text-center py-4 text-gray-500">
+                      <p>${result.message}</p>
+                    </div>`;
+                  }
+
+                  // Show execution status
+                  if (result.execution_status) {
+                    const statusColors = {
+                      'completed': 'bg-green-100 text-green-800',
+                      'failed': 'bg-red-100 text-red-800',
+                      'running': 'bg-blue-100 text-blue-800',
+                      'pending': 'bg-gray-100 text-gray-800'
+                    };
+                    html += `<div class="mb-4">
+                      <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusColors[result.execution_status] || 'bg-gray-100 text-gray-800'}">
+                        Execution: ${result.execution_status}
+                      </span>
+                    </div>`;
+                  }
+
+                  // Show data results
+                  if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+                    html += `<div class="mb-2 text-sm text-gray-600">
+                      <strong>Results:</strong> ${result.data.length} records
+                    </div>`;
+                    html += `<div class="overflow-x-auto">
+                      <pre class="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-auto max-h-64">${JSON.stringify(result.data.slice(0, 50), null, 2)}</pre>
+                    </div>`;
+                    if (result.data.length > 50) {
+                      html += `<p class="mt-2 text-xs text-gray-500">Showing first 50 of ${result.data.length} records</p>`;
+                    }
+                  } else if (result.data && typeof result.data === 'object' && Object.keys(result.data).length > 0) {
+                    html += `<div class="overflow-x-auto">
+                      <pre class="bg-gray-900 text-green-400 p-4 rounded-lg text-xs overflow-auto max-h-64">${JSON.stringify(result.data, null, 2)}</pre>
+                    </div>`;
+                  } else if (!result.message) {
+                    html += `<div class="text-center py-4 text-gray-500">
+                      <p>No output data available. Execute the workflow to see results.</p>
+                    </div>`;
+                  }
+
+                  contentDiv.innerHTML = html;
+                })
+                .catch(error => {
+                  console.error('Error fetching node data:', error);
+                  contentDiv.innerHTML = `
+                    <div class="text-center py-8 text-red-500">
+                      <p>Error loading data: ${error.message}</p>
+                    </div>
+                  `;
+                });
+              }
+            },
+            style: {
+              marginTop: 8,
+              padding: '4px 8px',
+              background: '#f0f0f0',
+              borderRadius: 3,
+              fontSize: 11,
+              textAlign: 'center',
+              cursor: 'pointer'
+            }
+          }, 'View Output')
+        ])
+      ]);
+    }
+
+    // Node types - must be defined outside component and be stable
     const nodeTypes = { service: ServiceNode };
 
-    // Main workflow builder component
+    // Main workflow builder component - using controlled mode with applyNodeChanges
     const WorkflowBuilder = () => {
-      // Use React Flow's hooks if available for proper state management
-      let nodes, setNodes, onNodesChangeFn;
-      let edges, setEdges, onEdgesChangeFn;
-
-      if (useNodesState && useEdgesState) {
-        [nodes, setNodes, onNodesChangeFn] = useNodesState(workflowData.nodes || []);
-        [edges, setEdges, onEdgesChangeFn] = useEdgesState(workflowData.edges || []);
-        console.log('Using React Flow state hooks');
-      } else {
-        [nodes, setNodes] = useState(workflowData.nodes || []);
-        [edges, setEdges] = useState(workflowData.edges || []);
-        onNodesChangeFn = null;
-        onEdgesChangeFn = null;
-        console.log('Using regular useState (React Flow hooks not available)');
-      }
+      // Use regular useState - we'll manually apply changes
+      const [nodes, setNodes] = useState(workflowData.nodes || []);
+      const [edges, setEdges] = useState(workflowData.edges || []);
 
       const reactFlowWrapper = useRef(null);
-      const reactFlowInstance = useReactFlow();
 
-      console.log('WorkflowBuilder render - nodes count:', nodes?.length);
+      // Track latest state in refs for async operations
+      const nodesRef = useRef(nodes);
+      const edgesRef = useRef(edges);
+      useEffect(() => {
+        nodesRef.current = nodes;
+        edgesRef.current = edges;
+      }, [nodes, edges]);
 
-      // Function to add a new node - exposed globally
-      const addNewNode = useCallback((serviceKey, serviceName) => {
-        console.log('addNewNode called with:', serviceKey, serviceName);
+      console.log('WorkflowBuilder render - nodes:', nodes.length, 'edges:', edges.length);
 
-        // Calculate position based on existing nodes
-        let position;
-        if (nodes.length === 0) {
-          position = { x: 100, y: 100 };
-        } else {
-          const maxX = Math.max(...nodes.map(n => n.position?.x || 0));
-          const avgY = nodes.reduce((sum, n) => sum + (n.position?.y || 0), 0) / nodes.length;
-          position = { x: maxX + 300, y: Math.max(100, avgY) };
-        }
-
-        const serviceInfo = services[serviceKey];
-        const label = serviceInfo?.name || serviceName || serviceKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-        const newNode = {
-          id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: 'service',
-          position: position,
-          data: {
-            label: label,
-            service_name: serviceKey,
-            config: {}
-          },
-          draggable: true,
-          selectable: true
-        };
-
-        console.log('Creating node:', newNode);
-        console.log('Current nodes before setNodes:', nodes);
-
-        setNodes(currentNodes => {
-          console.log('Inside setNodes callback, currentNodes:', currentNodes);
-          const updated = [...currentNodes, newNode];
-          console.log('State updated, nodes count:', updated.length, updated);
-
-          // Save workflow after state update
-          setTimeout(() => {
-            saveWorkflowData(updated, edges);
-          }, 100);
-
-          return updated;
+      // Handle node changes (including drag)
+      const onNodesChange = useCallback((changes) => {
+        // Log all changes with full details for debugging
+        changes.forEach(c => {
+          console.log('Node change:', c.type, c.id, c.type === 'position' ? c.position : '');
         });
 
-        // Fit view after a short delay to show all nodes
-        setTimeout(() => {
-          if (reactFlowInstance?.fitView) {
-            reactFlowInstance.fitView({ padding: 0.5, minZoom: 0.3, maxZoom: 1, duration: 300 });
-          }
-        }, 200);
-
-      }, [nodes, edges, reactFlowInstance]);
-
-      // Expose addNewNode globally
-      useEffect(() => {
-        window.addWorkflowNode = addNewNode;
-        window.workflowNodes = nodes;
-        window.workflowEdges = edges;
-        console.log('Exposed addWorkflowNode to window, current nodes:', nodes.length);
-
-        return () => {
-          delete window.addWorkflowNode;
-          delete window.workflowNodes;
-          delete window.workflowEdges;
-        };
-      }, [addNewNode, nodes, edges]);
-
-      // Save workflow data function
-      const saveWorkflowData = useCallback((nds, eds) => {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        if (!csrfToken) {
-          console.error('CSRF token not found');
-          return;
+        if (applyNodeChanges) {
+          setNodes((nds) => {
+            const result = applyNodeChanges(changes, nds);
+            return result;
+          });
+        } else {
+          console.warn('applyNodeChanges not available, using fallback');
+          setNodes((nds) => {
+            let updated = [...nds];
+            changes.forEach(change => {
+              if (change.type === 'position' && change.position) {
+                const idx = updated.findIndex(n => n.id === change.id);
+                if (idx !== -1) {
+                  updated[idx] = { ...updated[idx], position: change.position };
+                }
+              }
+            });
+            return updated;
+          });
         }
+      }, []);
+
+      // Handle edge changes
+      const onEdgesChange = useCallback((changes) => {
+        if (applyEdgeChanges) {
+          setEdges((eds) => applyEdgeChanges(changes, eds));
+        }
+      }, []);
+
+      // Handle new connections
+      const onConnect = useCallback((connection) => {
+        console.log('onConnect:', connection);
+        if (addEdge) {
+          setEdges((eds) => addEdge(connection, eds));
+        } else {
+          const newEdge = { ...connection, id: `edge-${Date.now()}` };
+          setEdges((eds) => [...eds, newEdge]);
+        }
+      }, []);
+
+      // Save workflow
+      const saveWorkflow = useCallback(() => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!csrfToken) return;
 
         fetch(updateUrl, {
           method: 'PATCH',
@@ -580,143 +517,105 @@
           body: JSON.stringify({
             workflow: {
               workflow_data: {
-                nodes: nds,
-                edges: eds
+                nodes: nodesRef.current,
+                edges: edgesRef.current
               }
             }
           })
         })
-        .then(response => response.json())
-        .then(data => console.log('Workflow saved'))
-        .catch(err => console.error('Save failed:', err));
+        .then(r => r.json())
+        .then(() => console.log('Saved'))
+        .catch(e => console.error('Save error:', e));
       }, []);
 
-      // Use React Flow's built-in change handlers (they handle all change types properly)
-      const onNodesChange = useCallback((changes) => {
-        if (onNodesChangeFn) {
-          // Use React Flow's handler which properly handles all change types
-          onNodesChangeFn(changes);
-        }
-      }, [onNodesChangeFn]);
+      // Track when dragging starts
+      const onNodeDragStart = useCallback((event, node) => {
+        console.log('>>> DRAG STARTED:', node.id, node.position);
+      }, []);
 
-      const onEdgesChange = useCallback((changes) => {
-        if (onEdgesChangeFn) {
-          onEdgesChangeFn(changes);
-        }
-      }, [onEdgesChangeFn]);
+      // Track during drag
+      const onNodeDrag = useCallback((event, node) => {
+        console.log('>>> DRAGGING:', node.id, node.position);
+      }, []);
 
-      const onConnect = useCallback((params) => {
-        if (addEdge) {
-          setEdges((eds) => addEdge(params, eds));
-        } else {
-          setEdges((eds) => [...eds, params]);
-        }
-        // Save after connecting
-        setTimeout(() => saveWorkflowData(nodes, edges), 100);
-      }, [nodes, edges, saveWorkflowData]);
-
-      // Save on node drag end
+      // Save on drag end
       const onNodeDragStop = useCallback((event, node) => {
-        console.log('Node drag stopped, saving...');
-        saveWorkflowData(nodes, edges);
-      }, [nodes, edges, saveWorkflowData]);
+        console.log('>>> DRAG STOPPED:', node.id, node.position);
+        setTimeout(saveWorkflow, 100);
+      }, [saveWorkflow]);
+
+      // Add new node function
+      const addNode = useCallback((serviceKey, serviceName) => {
+        console.log('Adding node:', serviceKey);
+
+        const currentNodes = nodesRef.current;
+        let position = { x: 100, y: 100 };
+        if (currentNodes.length > 0) {
+          const maxX = Math.max(...currentNodes.map(n => n.position?.x || 0));
+          position = { x: maxX + 280, y: 100 };
+        }
+
+        const serviceInfo = services[serviceKey];
+        const newNode = {
+          id: `node-${Date.now()}`,
+          type: 'service',
+          position,
+          data: {
+            label: serviceInfo?.name || serviceName,
+            service_name: serviceKey,
+            config: {}
+          }
+        };
+
+        setNodes(nds => [...nds, newNode]);
+        setTimeout(saveWorkflow, 200);
+      }, [saveWorkflow]);
+
+      // Expose to window
+      useEffect(() => {
+        window.addWorkflowNode = addNode;
+        window.workflowSetNodes = setNodes;
+        return () => {
+          delete window.addWorkflowNode;
+          delete window.workflowSetNodes;
+        };
+      }, [addNode]);
+
+      // Memoize node types to prevent re-renders
+      const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
       if (!ReactFlowComponent) {
-        return React.createElement('div', { className: 'p-4 text-red-600' }, 
-          'Error: React Flow component not loaded. Please refresh the page.'
+        return React.createElement('div', { style: { padding: 20, color: 'red' } },
+          'Error: React Flow not loaded'
         );
       }
-      
-      const children = [];
-      if (Background) {
-        children.push(React.createElement(Background, { key: 'bg', gap: 16, size: 1 }));
-      }
-      if (Controls) {
-        children.push(React.createElement(Controls, { key: 'controls' }));
-      }
-      if (MiniMap) {
-        children.push(React.createElement(MiniMap, { key: 'minimap', nodeColor: '#ef4444' }));
-      }
-      
-      // Ensure nodes have required properties and valid positions
-      console.log('Rendering with nodes:', nodes?.length, nodes);
-      let validNodes = (nodes || []).map((node, index) => {
-        // Ensure position is valid
-        let position = node.position || { x: 0, y: 0 };
-        if (typeof position.x !== 'number' || isNaN(position.x)) {
-          position.x = 200 + (index * 300);
-        }
-        if (typeof position.y !== 'number' || isNaN(position.y)) {
-          position.y = 200 + (index % 2 === 0 ? 0 : 150);
-        }
-        
-        return {
-          id: String(node.id), // Ensure ID is string
-          type: node.type || 'service',
-          position: { x: Number(position.x), y: Number(position.y) },
-          data: node.data || {},
-          draggable: node.draggable !== false,
-          selectable: node.selectable !== false
-        };
-      });
-      
-      // Ensure unique positions - if two nodes have same position, offset them
-      const positionMap = new Map();
-      validNodes = validNodes.map((node, index) => {
-        const posKey = `${node.position.x},${node.position.y}`;
-        if (positionMap.has(posKey)) {
-          // Offset this node to avoid overlap
-          const offset = positionMap.get(posKey);
-          node.position.x += 300;
-          node.position.y += (offset % 2 === 0 ? 0 : 150);
-          positionMap.set(posKey, offset + 1);
-        } else {
-          positionMap.set(posKey, 1);
-        }
-        return node;
-      });
-      
-      return React.createElement('div', { 
+
+      return React.createElement('div', {
         ref: reactFlowWrapper,
-        style: { 
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100%',
-          height: '100%'
-        }
-      }, [
+        style: { width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }
+      },
         React.createElement(ReactFlowComponent, {
-          key: 'flow',
-          nodes: validNodes,
-          edges: edges || [],
+          nodes: nodes,
+          edges: edges,
           onNodesChange: onNodesChange,
           onEdgesChange: onEdgesChange,
           onConnect: onConnect,
+          onNodeDragStart: onNodeDragStart,
+          onNodeDrag: onNodeDrag,
           onNodeDragStop: onNodeDragStop,
-          nodeTypes: nodeTypes,
+          nodeTypes: memoizedNodeTypes,
           fitView: true,
-          fitViewOptions: { padding: 0.8, minZoom: 0.2, maxZoom: 1 },
-          defaultEdgeOptions: {
-            style: { strokeWidth: 2, stroke: '#ef4444' },
-            type: 'smoothstep'
-          },
-          connectionLineStyle: { strokeWidth: 2, stroke: '#ef4444' },
-          snapToGrid: true,
-          snapGrid: [16, 16],
-          deleteKeyCode: 'Delete',
-          multiSelectionKeyCode: 'Shift',
-          nodesDraggable: true,
-          nodesConnectable: true,
-          elementsSelectable: true,
-          proOptions: { hideAttribution: true },
-          minZoom: 0.05,
+          fitViewOptions: { padding: 0.3 },
+          defaultEdgeOptions: { type: 'smoothstep', style: { stroke: '#ef4444', strokeWidth: 2 } },
+          minZoom: 0.1,
           maxZoom: 2,
-          defaultViewport: { x: 100, y: 100, zoom: 0.5 }
-        }, children)
-      ]);
+          proOptions: { hideAttribution: true }
+        }, [
+          Background && React.createElement(Background, { key: 'bg', variant: 'dots', gap: 20, size: 1 }),
+          Controls && React.createElement(Controls, { key: 'ctrl' }),
+          MiniMap && React.createElement(MiniMap, { key: 'mm', nodeColor: '#ef4444' })
+        ])
+      );
     };
 
     // Setup modal close handlers
@@ -773,6 +672,14 @@
     // Node configuration modal functions
     let currentConfigNodeId = null;
     let currentConfigNodeData = null;
+
+    // Listen for custom event from React component
+    document.addEventListener('openNodeConfig', function(e) {
+      console.log('openNodeConfig event received:', e.detail);
+      if (e.detail && e.detail.nodeId) {
+        window.openNodeConfigModal(e.detail.nodeId, e.detail.nodeData);
+      }
+    });
 
     // Open the node configuration modal
     window.openNodeConfigModal = function(nodeId, nodeData) {
@@ -991,6 +898,8 @@
 
       // Save configuration
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      const serviceName = currentConfigNodeData?.service_name || formData.get('service_name');
+
       fetch(`${updateNodeConfigUrl}?node_id=${encodeURIComponent(currentConfigNodeId)}`, {
         method: 'PATCH',
         headers: {
@@ -1000,7 +909,8 @@
         },
         body: JSON.stringify({
           config: config,
-          label: label
+          label: label,
+          service_name: serviceName
         })
       })
       .then(response => response.json())

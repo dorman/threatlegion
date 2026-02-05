@@ -51,33 +51,6 @@
     </div>
   </div>
 
-  <!-- Threat Feeds Overview -->
-  <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-    <div class="px-4 py-5 sm:px-6 flex justify-between items-center">
-      <div>
-        <h3 class="text-lg leading-6 font-medium text-gray-900">Threat Feed Management</h3>
-        <p class="mt-1 max-w-2xl text-sm text-gray-500">Manage external threat intelligence feeds and data sources</p>
-      </div>
-      <%= link_to "Manage Feeds", admin_threat_feeds_path, class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500" %>
-    </div>
-    <div class="border-t border-gray-200 px-4 py-5 sm:px-6">
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="text-center">
-          <div class="text-3xl font-bold text-gray-900"><%= ThreatFeed.count %></div>
-          <div class="text-sm text-gray-500 mt-1">Total Feeds</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-green-600"><%= ThreatFeed.enabled.count %></div>
-          <div class="text-sm text-gray-500 mt-1">Enabled</div>
-        </div>
-        <div class="text-center">
-          <div class="text-3xl font-bold text-yellow-600"><%= ThreatFeed.enabled.needs_refresh.count %></div>
-          <div class="text-sm text-gray-500 mt-1">Need Refresh</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Workflow Automation -->
   <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
     <div class="px-4 py-5 sm:px-6 flex justify-between items-center">

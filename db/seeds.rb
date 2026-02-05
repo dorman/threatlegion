@@ -142,21 +142,6 @@ Vulnerability.find_or_create_by!(cve_id: "CVE-2024-5678") do |v|
 end
 puts "✓ Created vulnerabilities"
 
-ThreatFeed.find_or_create_by!(name: "AlienVault OTX") do |f|
-  f.url = "https://otx.alienvault.com/api/v1/pulses/subscribed"
-  f.feed_type = "json"
-  f.enabled = true
-  f.refresh_interval = 3600
-end
-
-ThreatFeed.find_or_create_by!(name: "Abuse.ch URLhaus") do |f|
-  f.url = "https://urlhaus.abuse.ch/downloads/csv_recent/"
-  f.feed_type = "csv"
-  f.enabled = true
-  f.refresh_interval = 7200
-end
-puts "✓ Created threat feeds"
-
 10.times do |i|
   Indicator.find_or_create_by!(value: "malicious-#{i}.example.com") do |ind|
     ind.indicator_type = "domain"
