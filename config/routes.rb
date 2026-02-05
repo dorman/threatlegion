@@ -31,6 +31,7 @@ Rails.application.routes.draw do
         post :execute
         get :results
         get :node_data
+        patch :update_node_config
       end
       collection do
         get :service_info

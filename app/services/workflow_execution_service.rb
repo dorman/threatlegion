@@ -32,11 +32,22 @@ class WorkflowExecutionService
         }
       end
 
+      # Build node_outputs keyed by node_id for easy UI lookups
+      node_outputs = {}
+      @workflow.workflow_nodes.each do |node|
+        if @node_results.key?(node.id)
+          result = @node_results[node.id]
+          # Store the data array directly if it's a hash with :data key
+          node_outputs[node.node_id] = result.is_a?(Hash) && result[:data] ? result[:data] : result
+        end
+      end
+
       @execution.update!(
         status: 'completed',
         completed_at: Time.current,
         result_data: {
           results: final_results,
+          node_outputs: node_outputs,
           total_records: @node_results.values.sum { |r| r.is_a?(Hash) && r[:count] ? r[:count] : (r.is_a?(Array) ? r.count : 1) }
         },
         records_processed: final_results.sum { |r| r[:data].is_a?(Array) ? r[:data].count : 1 }
@@ -87,8 +98,11 @@ class WorkflowExecutionService
 
     # Execute the service method
     service_name = node.service_name || node.node_type
-    method_name = node.config['method'] || 'default'
-    inputs = node.config['inputs'] || {}
+    config = node.config || {}
+    method_name = config['method'] || config[:method] || 'default'
+
+    # Build inputs from config (excluding 'method' key)
+    inputs = config.except('method', :method).symbolize_keys
     inputs[:data] = input_data if input_data
 
     result = WorkflowServiceRegistry.execute_service(service_name, method_name, inputs)

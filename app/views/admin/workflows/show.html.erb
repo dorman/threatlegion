@@ -18,16 +18,14 @@
       <div class="w-64 bg-gray-50 border-r border-gray-200 overflow-y-auto flex-shrink-0">
         <div class="p-4 border-b border-gray-200">
           <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Available Services</h3>
-          <p class="mt-1 text-xs text-gray-500">Drag to canvas</p>
+          <p class="mt-1 text-xs text-gray-500">Click + to add to canvas</p>
         </div>
         <div class="p-2 space-y-2" id="services-sidebar">
           <% @service_info.each do |service_key, service_data| %>
-            <div 
-              class="service-item p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md cursor-move transition-shadow"
-              draggable="true"
+            <div
+              class="service-item p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
               data-service-key="<%= service_key %>"
-              data-service-name="<%= service_data[:name] %>"
-              style="user-select: none;">
+              data-service-name="<%= service_data[:name] %>">
               <div class="flex items-center space-x-2">
                 <div class="flex-shrink-0">
                   <div class="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
@@ -40,6 +38,16 @@
                   <p class="text-sm font-medium text-gray-900 truncate"><%= service_data[:name] %></p>
                   <p class="text-xs text-gray-500 truncate"><%= service_data[:description] %></p>
                 </div>
+                <button
+                  type="button"
+                  class="add-node-btn flex-shrink-0 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
+                  data-service-key="<%= service_key %>"
+                  data-service-name="<%= service_data[:name] %>"
+                  title="Add to canvas">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
               </div>
             </div>
           <% end %>
@@ -47,15 +55,16 @@
       </div>
 
       <!-- React Flow Canvas -->
-      <div class="flex-1 relative overflow-hidden" id="react-flow-container" style="min-width: 0;">
-        <div id="workflow-builder" 
+      <div class="flex-1 relative" id="react-flow-container" style="min-width: 0; width: 100%; height: 100%; overflow: hidden;">
+        <div id="workflow-builder"
              data-workflow-id="<%= @workflow.id %>"
              data-workflow-data="<%= @workflow_data.to_json %>"
              data-services="<%= @service_info.to_json %>"
              data-update-url="<%= admin_workflow_path(@workflow) %>"
              data-node-data-url="<%= node_data_admin_workflow_path(@workflow) %>"
-             class="h-full w-full">
-          <div id="react-flow-root" class="h-full w-full" style="background: #f9fafb;"></div>
+             data-update-node-config-url="<%= update_node_config_admin_workflow_path(@workflow) %>"
+             style="width: 100%; height: 100%; position: relative;">
+          <div id="react-flow-root" style="width: 100%; height: 100%; background: #f9fafb; position: relative;"></div>
         </div>
       </div>
     </div>
@@ -124,13 +133,77 @@
           </svg>
         </button>
       </div>
-      
+
       <div id="node-data-content" class="max-h-96 overflow-y-auto">
         <div class="text-center py-8 text-gray-500">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
           <p class="mt-2">Loading data...</p>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Node Configuration Modal -->
+<div id="node-config-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+  <div class="relative top-10 mx-auto p-5 border w-11/12 max-w-xl shadow-lg rounded-md bg-white">
+    <div class="mt-3">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-medium text-gray-900" id="node-config-title">Configure Node</h3>
+        <button id="close-config-modal-btn" type="button" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <form id="node-config-form" class="space-y-4">
+        <input type="hidden" id="config-node-id" name="node_id" />
+        <input type="hidden" id="config-service-name" name="service_name" />
+
+        <!-- Node Label -->
+        <div>
+          <label for="config-node-label" class="block text-sm font-medium text-gray-700">Node Label</label>
+          <input type="text" id="config-node-label" name="label"
+                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                 placeholder="Enter a custom label for this node" />
+        </div>
+
+        <!-- Method Selection -->
+        <div>
+          <label for="config-method" class="block text-sm font-medium text-gray-700">Method</label>
+          <select id="config-method" name="method"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
+            <option value="">Select a method...</option>
+          </select>
+          <p id="method-description" class="mt-1 text-xs text-gray-500"></p>
+        </div>
+
+        <!-- Dynamic Input Fields Container -->
+        <div id="config-inputs-container" class="space-y-4">
+          <!-- Dynamic fields will be inserted here -->
+        </div>
+
+        <!-- API Key Section (for services that need it) -->
+        <div id="api-key-section" class="hidden border-t pt-4 mt-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-2">API Configuration</h4>
+          <div id="api-key-fields" class="space-y-3">
+            <!-- API key fields will be inserted here -->
+          </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex justify-end space-x-3 pt-4 border-t">
+          <button type="button" id="cancel-config-btn"
+                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit"
+                  class="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700">
+            Save Configuration
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -148,6 +221,7 @@
     const services = JSON.parse(builderEl.dataset.services || '{}');
     const updateUrl = builderEl.dataset.updateUrl;
     const nodeDataUrlTemplate = builderEl.dataset.nodeDataUrl;
+    const updateNodeConfigUrl = builderEl.dataset.updateNodeConfigUrl;
     const workflowId = builderEl.dataset.workflowId;
 
     const { React, ReactDOM } = window;
@@ -169,17 +243,26 @@
     // Try different possible structures
     const ReactFlowProvider = FlowLib?.ReactFlowProvider || FlowLib?.default?.ReactFlowProvider;
     const useReactFlow = FlowLib?.useReactFlow || FlowLib?.default?.useReactFlow;
+    const useNodesState = FlowLib?.useNodesState || FlowLib?.default?.useNodesState;
+    const useEdgesState = FlowLib?.useEdgesState || FlowLib?.default?.useEdgesState;
+    const addEdge = FlowLib?.addEdge || FlowLib?.default?.addEdge;
     const Background = FlowLib?.Background || FlowLib?.default?.Background;
     const Controls = FlowLib?.Controls || FlowLib?.default?.Controls;
     const MiniMap = FlowLib?.MiniMap || FlowLib?.default?.MiniMap;
     const Handle = FlowLib?.Handle || FlowLib?.default?.Handle;
-    const Position = FlowLib?.Position || FlowLib?.default?.Position || { 
-      Left: 'left', 
-      Right: 'right', 
-      Top: 'top', 
-      Bottom: 'bottom' 
+    const Position = FlowLib?.Position || FlowLib?.default?.Position || {
+      Left: 'left',
+      Right: 'right',
+      Top: 'top',
+      Bottom: 'bottom'
     };
     const ReactFlowComponent = FlowLib?.ReactFlow || FlowLib?.default?.ReactFlow || FlowLib?.default;
+
+    console.log('React Flow hooks available:', {
+      useNodesState: !!useNodesState,
+      useEdgesState: !!useEdgesState,
+      addEdge: !!addEdge
+    });
     
     // Validate components
     if (!ReactFlowProvider || !useReactFlow || !Background || !Controls || !Handle || !ReactFlowComponent) {
@@ -196,14 +279,15 @@
       console.log('All React Flow components loaded successfully');
     }
 
-    // Enhanced Service Node with click handler
+    // Enhanced Service Node with click handler and config button
     const ServiceNode = ({ data, id }) => {
-      const handleClick = (e) => {
+      // Handle clicking the node body to view data
+      const handleViewData = (e) => {
         e.stopPropagation();
         const modal = document.getElementById('node-data-modal');
         const title = document.getElementById('node-data-title');
         const content = document.getElementById('node-data-content');
-        
+
         if (!modal || !title || !content) {
           console.error('Modal elements not found');
           return;
@@ -227,23 +311,23 @@
           }
           return response.json();
         })
-        .then(data => {
-          if (data.error) {
-            content.innerHTML = `<div class="text-center py-8 text-red-600">${data.error}</div>`;
+        .then(responseData => {
+          if (responseData.error) {
+            content.innerHTML = `<div class="text-center py-8 text-red-600">${responseData.error}</div>`;
             return;
           }
 
           let html = '';
-          if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+          if (responseData.data && Array.isArray(responseData.data) && responseData.data.length > 0) {
             html = '<div class="overflow-x-auto"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr>';
-            const firstItem = data.data[0];
+            const firstItem = responseData.data[0];
             const keys = Object.keys(firstItem);
             keys.forEach(key => {
               html += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${key}</th>`;
             });
             html += '</tr></thead><tbody class="bg-white divide-y divide-gray-200">';
-            
-            data.data.slice(0, 100).forEach((item) => {
+
+            responseData.data.slice(0, 100).forEach((item) => {
               html += '<tr class="hover:bg-gray-50">';
               keys.forEach(key => {
                 let value = item[key];
@@ -261,11 +345,11 @@
               html += '</tr>';
             });
             html += '</tbody></table></div>';
-            if (data.data.length > 100) {
-              html += `<div class="mt-4 text-sm text-gray-500 text-center">Showing first 100 of ${data.data.length} records</div>`;
+            if (responseData.data.length > 100) {
+              html += `<div class="mt-4 text-sm text-gray-500 text-center">Showing first 100 of ${responseData.data.length} records</div>`;
             }
           } else {
-            html = `<div class="text-center py-8 text-gray-500">${data.message || 'No data available. Execute the workflow to see results.'}</div>`;
+            html = `<div class="text-center py-8 text-gray-500">${responseData.message || 'No data available. Execute the workflow to see results.'}</div>`;
           }
           content.innerHTML = html;
         })
@@ -275,377 +359,267 @@
         });
       };
 
+      // Handle clicking the config/gear button
+      const handleOpenConfig = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        console.log('Config button clicked for node:', id, data);
+        if (window.openNodeConfigModal) {
+          window.openNodeConfigModal(id, data);
+        } else {
+          console.error('openNodeConfigModal not defined yet');
+          alert('Config modal not ready. Please try again.');
+        }
+      };
+
       const handlePosition = Position?.Right || 'right';
       const targetPosition = Position?.Left || 'left';
-      
+
+      // Get configured method name to display
+      const configuredMethod = data.config?.method;
+      const methodDisplay = configuredMethod ? `Method: ${configuredMethod}` : 'Click gear to configure';
+
       return React.createElement('div', {
-        className: 'px-4 py-3 shadow-lg rounded-lg bg-white border-2 border-red-500 hover:border-red-600 cursor-pointer transition-all',
-        style: { 
-          width: 220, 
-          minHeight: 80,
+        className: 'px-4 py-3 shadow-lg rounded-lg bg-white border-2 border-red-500 hover:border-red-600 transition-all',
+        style: {
+          width: 240,
+          minHeight: 100,
           position: 'relative',
           zIndex: 1,
           boxSizing: 'border-box',
           backgroundColor: 'white'
         },
-        onClick: handleClick,
         'data-node-id': id
       }, [
-        Handle ? React.createElement(Handle, { 
-          key: 'source', 
-          type: 'source', 
-          position: handlePosition, 
+        Handle ? React.createElement(Handle, {
+          key: 'source',
+          type: 'source',
+          position: handlePosition,
           id: 'source',
           className: 'w-3 h-3 bg-red-500',
           style: { width: '12px', height: '12px', borderRadius: '50%' }
         }) : null,
-        Handle ? React.createElement(Handle, { 
-          key: 'target', 
-          type: 'target', 
-          position: targetPosition, 
+        Handle ? React.createElement(Handle, {
+          key: 'target',
+          type: 'target',
+          position: targetPosition,
           id: 'target',
           className: 'w-3 h-3 bg-blue-500',
           style: { width: '12px', height: '12px', borderRadius: '50%' }
         }) : null,
-        React.createElement('div', { key: 'icon', className: 'flex items-center space-x-2 mb-2' }, [
-          React.createElement('div', { key: 'icon-bg', className: 'w-8 h-8 bg-red-100 rounded flex items-center justify-center' }, [
-            React.createElement('svg', { key: 'icon-svg', className: 'w-5 h-5 text-red-600', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-              React.createElement('path', { key: 'path', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13 10V3L4 14h7v7l9-11h-7z' })
+        // Header with icon and config button
+        React.createElement('div', { key: 'header', className: 'flex items-center justify-between mb-2' }, [
+          React.createElement('div', { key: 'icon-wrapper', className: 'flex items-center space-x-2' }, [
+            React.createElement('div', { key: 'icon-bg', className: 'w-8 h-8 bg-red-100 rounded flex items-center justify-center' }, [
+              React.createElement('svg', { key: 'icon-svg', className: 'w-5 h-5 text-red-600', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+                React.createElement('path', { key: 'path', strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: '2', d: 'M13 10V3L4 14h7v7l9-11h-7z' })
+              ])
+            ])
+          ]),
+          // Config/Gear button
+          React.createElement('button', {
+            key: 'config-btn',
+            onClick: handleOpenConfig,
+            className: 'p-1.5 rounded-full hover:bg-gray-100 transition-colors',
+            title: 'Configure node',
+            style: { cursor: 'pointer' }
+          }, [
+            React.createElement('svg', {
+              key: 'gear-icon',
+              className: 'w-5 h-5 text-gray-500 hover:text-gray-700',
+              fill: 'none',
+              stroke: 'currentColor',
+              viewBox: '0 0 24 24'
+            }, [
+              React.createElement('path', {
+                key: 'gear-path',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                strokeWidth: '2',
+                d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
+              }),
+              React.createElement('path', {
+                key: 'gear-center',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                strokeWidth: '2',
+                d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z'
+              })
             ])
           ])
         ]),
+        // Node label
         React.createElement('div', { key: 'label', className: 'font-bold text-gray-900 text-sm' }, data.label || 'Untitled'),
+        // Service name
         React.createElement('div', { key: 'service', className: 'text-xs text-gray-500 mt-1' }, data.service_name || ''),
-        React.createElement('div', { key: 'hint', className: 'text-xs text-gray-400 mt-2 italic' }, 'Click to view data')
+        // Method indicator
+        React.createElement('div', {
+          key: 'method',
+          className: `text-xs mt-1 ${configuredMethod ? 'text-green-600' : 'text-gray-400 italic'}`
+        }, methodDisplay),
+        // View data button
+        React.createElement('button', {
+          key: 'view-data-btn',
+          onClick: handleViewData,
+          className: 'mt-2 w-full text-xs text-center py-1 px-2 bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 text-gray-600 transition-colors',
+          style: { cursor: 'pointer' }
+        }, 'View Output Data')
       ]);
     };
 
+    // Define nodeTypes outside component to prevent re-creation on each render
+    const nodeTypes = { service: ServiceNode };
+
     // Main workflow builder component
     const WorkflowBuilder = () => {
-      const [nodes, setNodes] = useState(workflowData.nodes || []);
-      const [edges, setEdges] = useState(workflowData.edges || []);
+      // Use React Flow's hooks if available for proper state management
+      let nodes, setNodes, onNodesChangeFn;
+      let edges, setEdges, onEdgesChangeFn;
+
+      if (useNodesState && useEdgesState) {
+        [nodes, setNodes, onNodesChangeFn] = useNodesState(workflowData.nodes || []);
+        [edges, setEdges, onEdgesChangeFn] = useEdgesState(workflowData.edges || []);
+        console.log('Using React Flow state hooks');
+      } else {
+        [nodes, setNodes] = useState(workflowData.nodes || []);
+        [edges, setEdges] = useState(workflowData.edges || []);
+        onNodesChangeFn = null;
+        onEdgesChangeFn = null;
+        console.log('Using regular useState (React Flow hooks not available)');
+      }
+
       const reactFlowWrapper = useRef(null);
       const reactFlowInstance = useReactFlow();
-      
-      // Expose setNodes to window for manual drop handler - use useCallback to ensure stable reference
-      const setNodesWrapper = useCallback((updater) => {
-        setNodes(updater);
-      }, []);
-      
-      // Expose functions to window only once on mount
-      useEffect(() => {
-        window.workflowSetNodes = setNodesWrapper;
-        window.workflowServices = services;
-        window.workflowReactFlowInstance = reactFlowInstance;
-        return () => {
-          delete window.workflowSetNodes;
-          delete window.workflowServices;
-          delete window.workflowReactFlowInstance;
-        };
-      }, [setNodesWrapper, services, reactFlowInstance]);
-      
-      // Update current nodes/edges without causing re-renders
-      useEffect(() => {
-        window.workflowNodes = nodes;
-        window.workflowEdges = edges;
-      }, [nodes, edges]);
-      
-      // Helper to get screen to flow position
-      const getScreenToFlowPosition = (x, y) => {
-        if (reactFlowInstance && reactFlowInstance.screenToFlowPosition) {
-          return reactFlowInstance.screenToFlowPosition({ x, y });
-        }
-        // Fallback: approximate position
-        const bounds = reactFlowWrapper.current?.getBoundingClientRect();
-        if (bounds) {
-          return {
-            x: x - bounds.left - 100,
-            y: y - bounds.top - 100
-          };
-        }
-        return { x: 100, y: 100 };
-      };
 
-      const onNodesChange = useCallback((changes) => {
-        setNodes((nds) => {
-          const updated = nds.map((node) => {
-            const change = changes.find((c) => c.id === node.id);
-            if (change && change.type === 'position') {
-              return { ...node, position: change.position };
-            }
-            return node;
-          });
-          // Only save if there are actual changes
-          if (changes.length > 0) {
-            saveWorkflow(updated, edges);
-          }
-          return updated;
-        });
-      }, [edges]);
+      console.log('WorkflowBuilder render - nodes count:', nodes?.length);
 
-      const onEdgesChange = useCallback((changes) => {
-        setEdges((es) => {
-          const updated = es.map((edge) => {
-            const change = changes.find((c) => c.id === edge.id);
-            return change ? { ...edge, ...change } : edge;
-          });
-          // Only save if there are actual changes
-          if (changes.length > 0) {
-            saveWorkflow(nodes, updated);
-          }
-          return updated;
-        });
-      }, [nodes]);
+      // Function to add a new node - exposed globally
+      const addNewNode = useCallback((serviceKey, serviceName) => {
+        console.log('addNewNode called with:', serviceKey, serviceName);
 
-      const onConnect = useCallback((params) => {
-        setEdges((eds) => {
-          const newEdges = [...eds, params];
-          saveWorkflow(nodes, newEdges);
-          return newEdges;
-        });
-      }, [nodes]);
-
-      const onDragOver = useCallback((event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (event.dataTransfer) {
-          event.dataTransfer.dropEffect = 'move';
-        }
-        return false;
-      }, []);
-
-      const onDrop = useCallback((event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        console.log('=== DROP EVENT IN REACT FLOW ===');
-        console.log('Drop event received in React Flow');
-        console.log('DataTransfer types:', event.dataTransfer?.types);
-        console.log('Drop location:', event.clientX, event.clientY);
-        console.log('Current nodes count:', nodes.length);
-        
-        // Try multiple data transfer formats
-        let serviceKey = null;
-        try {
-          serviceKey = event.dataTransfer.getData('application/reactflow');
-          if (!serviceKey) {
-            serviceKey = event.dataTransfer.getData('text/plain');
-          }
-          if (!serviceKey && event.dataTransfer.types) {
-            // Try all available types
-            for (let i = 0; i < event.dataTransfer.types.length; i++) {
-              const type = event.dataTransfer.types[i];
-              try {
-                const data = event.dataTransfer.getData(type);
-                if (data && data.trim()) {
-                  console.log(`Found data in type ${type}:`, data);
-                  serviceKey = data;
-                  break;
-                }
-              } catch (e) {
-                // Some types can't be read, skip them
-                continue;
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Error reading drag data:', e);
-        }
-        
-        if (!serviceKey) {
-          console.warn('No service key in drag data. Available types:', event.dataTransfer?.types);
-          return;
-        }
-        
-        console.log('Service key found:', serviceKey);
-        console.log('Services object:', services);
-        console.log('Service key in services?', serviceKey in services);
-
-        // Get position relative to React Flow viewport
+        // Calculate position based on existing nodes
         let position;
-        try {
-          if (reactFlowInstance && reactFlowInstance.screenToFlowPosition) {
-            position = reactFlowInstance.screenToFlowPosition({
-              x: event.clientX,
-              y: event.clientY
-            });
-            console.log('React Flow onDrop: Position from screenToFlowPosition:', position);
-          } else {
-            // Fallback: get position relative to the React Flow container
-            const reactFlowEl = document.querySelector('.react-flow__viewport') || 
-                               document.querySelector('.react-flow') ||
-                               reactFlowWrapper.current;
-            if (reactFlowEl) {
-              const rect = reactFlowEl.getBoundingClientRect();
-              // Account for zoom and pan
-              const viewport = reactFlowInstance?.getViewport?.() || { x: 0, y: 0, zoom: 1 };
-              const zoom = viewport.zoom || reactFlowInstance?.getZoom?.() || 1;
-              position = {
-                x: (event.clientX - rect.left - viewport.x) / zoom,
-                y: (event.clientY - rect.top - viewport.y) / zoom
-              };
-              console.log('React Flow onDrop: Position from fallback:', position, 'viewport:', viewport, 'zoom:', zoom);
-            } else {
-              // Last resort: offset from existing nodes with better spacing
-              const lastNode = nodes[nodes.length - 1];
-              if (lastNode && lastNode.position) {
-                // Space nodes horizontally with more spacing, alternate Y for visual separation
-                position = {
-                  x: lastNode.position.x + 300,
-                  y: lastNode.position.y + (nodes.length % 2 === 0 ? 150 : 0)
-                };
-              } else {
-                position = { x: 200, y: 200 };
-              }
-              console.log('React Flow onDrop: Position from last resort:', position);
-            }
-          }
-        } catch (error) {
-          console.error('Error calculating drop position:', error);
-          // Fallback to offset from existing nodes with better spacing
-          const lastNode = nodes[nodes.length - 1];
-          if (lastNode && lastNode.position) {
-            // Space nodes horizontally with more spacing, alternate Y for visual separation
-            position = {
-              x: lastNode.position.x + 300,
-              y: lastNode.position.y + (nodes.length % 2 === 0 ? 150 : 0)
-            };
-          } else {
-            position = { x: 200, y: 200 };
-          }
-        }
-        
-        console.log('Dropping node at position:', position, 'for service:', serviceKey);
-        console.log('Available services:', Object.keys(services));
-
-        // Try both string and symbol keys
-        const serviceInfo = services[serviceKey] || services[serviceKey.toString()];
-        console.log('Service info for', serviceKey, ':', serviceInfo);
-        
-        // Create label from service info or fallback
-        let label = serviceKey;
-        if (serviceInfo) {
-          // Try both 'name' and :name (from Ruby hash)
-          label = serviceInfo.name || serviceInfo['name'] || serviceKey;
-        } else {
-          // Fallback: format the key nicely
-          label = serviceKey.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
-        
-        // Ensure position is valid
-        if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-          console.error('Invalid position, using default');
+        if (nodes.length === 0) {
           position = { x: 100, y: 100 };
+        } else {
+          const maxX = Math.max(...nodes.map(n => n.position?.x || 0));
+          const avgY = nodes.reduce((sum, n) => sum + (n.position?.y || 0), 0) / nodes.length;
+          position = { x: maxX + 300, y: Math.max(100, avgY) };
         }
-        
+
+        const serviceInfo = services[serviceKey];
+        const label = serviceInfo?.name || serviceName || serviceKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
         const newNode = {
           id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           type: 'service',
-          position: { x: Number(position.x), y: Number(position.y) }, // Ensure numbers
+          position: position,
           data: {
             label: label,
             service_name: serviceKey,
             config: {}
           },
-          // Ensure required React Flow properties
           draggable: true,
           selectable: true
         };
 
-        console.log('Creating new node:', newNode);
-        console.log('Current nodes before add:', nodes.map(n => ({ id: n.id, label: n.data?.label, position: n.position })));
+        console.log('Creating node:', newNode);
+        console.log('Current nodes before setNodes:', nodes);
 
-        setNodes((nds) => {
-          console.log('setNodes called with current nodes:', nds.length);
-          
-          // Check if node with same ID already exists
-          const existingNode = nds.find(n => n.id === newNode.id);
-          if (existingNode) {
-            console.warn('Node already exists, skipping');
-            return nds;
-          }
-          
-          const updated = [...nds, newNode];
-          console.log('Updated nodes count:', updated.length);
-          console.log('New nodes list:', updated.map(n => ({ 
-            id: n.id, 
-            label: n.data?.label, 
-            position: n.position,
-            type: n.type
-          })));
-          
-          // Inspect DOM and fit view after state update
+        setNodes(currentNodes => {
+          console.log('Inside setNodes callback, currentNodes:', currentNodes);
+          const updated = [...currentNodes, newNode];
+          console.log('State updated, nodes count:', updated.length, updated);
+
+          // Save workflow after state update
           setTimeout(() => {
-            // Fit view to show all nodes
-            if (reactFlowInstance && reactFlowInstance.fitView) {
-              setTimeout(() => {
-                reactFlowInstance.fitView({ 
-                  padding: 0.3, 
-                  duration: 400,
-                  minZoom: 0.5,
-                  maxZoom: 1.5
-                });
-              }, 100);
-            }
-            
-            saveWorkflow(updated, edges);
-          }, 300);
-          
+            saveWorkflowData(updated, edges);
+          }, 100);
+
           return updated;
         });
-      }, [nodes, edges, services, reactFlowInstance]);
 
-      // Debounce save to prevent infinite loops
-      let saveTimeout = null;
-      const saveWorkflow = (nds, eds) => {
-        // Expose to window for manual drop handler
-        window.saveWorkflow = saveWorkflow;
-        // Clear existing timeout
-        if (saveTimeout) {
-          clearTimeout(saveTimeout);
-        }
-        
-        // Debounce: wait 500ms before saving
-        saveTimeout = setTimeout(() => {
-          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-          if (!csrfToken) {
-            console.error('CSRF token not found');
-            return;
+        // Fit view after a short delay to show all nodes
+        setTimeout(() => {
+          if (reactFlowInstance?.fitView) {
+            reactFlowInstance.fitView({ padding: 0.5, minZoom: 0.3, maxZoom: 1, duration: 300 });
           }
-          
-          fetch(updateUrl, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRF-Token': csrfToken,
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-              workflow: {
-                workflow_data: {
-                  nodes: nds,
-                  edges: eds
-                }
+        }, 200);
+
+      }, [nodes, edges, reactFlowInstance]);
+
+      // Expose addNewNode globally
+      useEffect(() => {
+        window.addWorkflowNode = addNewNode;
+        window.workflowNodes = nodes;
+        window.workflowEdges = edges;
+        console.log('Exposed addWorkflowNode to window, current nodes:', nodes.length);
+
+        return () => {
+          delete window.addWorkflowNode;
+          delete window.workflowNodes;
+          delete window.workflowEdges;
+        };
+      }, [addNewNode, nodes, edges]);
+
+      // Save workflow data function
+      const saveWorkflowData = useCallback((nds, eds) => {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        if (!csrfToken) {
+          console.error('CSRF token not found');
+          return;
+        }
+
+        fetch(updateUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            workflow: {
+              workflow_data: {
+                nodes: nds,
+                edges: eds
               }
-            })
-          })
-          .then(response => {
-            if (!response.ok) {
-              return response.text().then(text => {
-                throw new Error(`HTTP ${response.status}: ${text}`);
-              });
             }
-            return response.json();
           })
-          .then(data => {
-            console.log('Workflow saved successfully');
-          })
-          .catch(err => {
-            console.error('Failed to save workflow:', err);
-            // Don't retry on error to prevent infinite loop
-          });
-        }, 500);
-      };
+        })
+        .then(response => response.json())
+        .then(data => console.log('Workflow saved'))
+        .catch(err => console.error('Save failed:', err));
+      }, []);
+
+      // Use React Flow's built-in change handlers (they handle all change types properly)
+      const onNodesChange = useCallback((changes) => {
+        if (onNodesChangeFn) {
+          // Use React Flow's handler which properly handles all change types
+          onNodesChangeFn(changes);
+        }
+      }, [onNodesChangeFn]);
+
+      const onEdgesChange = useCallback((changes) => {
+        if (onEdgesChangeFn) {
+          onEdgesChangeFn(changes);
+        }
+      }, [onEdgesChangeFn]);
+
+      const onConnect = useCallback((params) => {
+        if (addEdge) {
+          setEdges((eds) => addEdge(params, eds));
+        } else {
+          setEdges((eds) => [...eds, params]);
+        }
+        // Save after connecting
+        setTimeout(() => saveWorkflowData(nodes, edges), 100);
+      }, [nodes, edges, saveWorkflowData]);
+
+      // Save on node drag end
+      const onNodeDragStop = useCallback((event, node) => {
+        console.log('Node drag stopped, saving...');
+        saveWorkflowData(nodes, edges);
+      }, [nodes, edges, saveWorkflowData]);
 
       if (!ReactFlowComponent) {
         return React.createElement('div', { className: 'p-4 text-red-600' }, 
@@ -665,14 +639,15 @@
       }
       
       // Ensure nodes have required properties and valid positions
-      const validNodes = (nodes || []).map((node, index) => {
+      console.log('Rendering with nodes:', nodes?.length, nodes);
+      let validNodes = (nodes || []).map((node, index) => {
         // Ensure position is valid
         let position = node.position || { x: 0, y: 0 };
         if (typeof position.x !== 'number' || isNaN(position.x)) {
-          position.x = 100 + (index * 250);
+          position.x = 200 + (index * 300);
         }
         if (typeof position.y !== 'number' || isNaN(position.y)) {
-          position.y = 100 + (index * 100);
+          position.y = 200 + (index % 2 === 0 ? 0 : 150);
         }
         
         return {
@@ -685,14 +660,32 @@
         };
       });
       
+      // Ensure unique positions - if two nodes have same position, offset them
+      const positionMap = new Map();
+      validNodes = validNodes.map((node, index) => {
+        const posKey = `${node.position.x},${node.position.y}`;
+        if (positionMap.has(posKey)) {
+          // Offset this node to avoid overlap
+          const offset = positionMap.get(posKey);
+          node.position.x += 300;
+          node.position.y += (offset % 2 === 0 ? 0 : 150);
+          positionMap.set(posKey, offset + 1);
+        } else {
+          positionMap.set(posKey, 1);
+        }
+        return node;
+      });
+      
       return React.createElement('div', { 
         ref: reactFlowWrapper,
-        className: 'h-full w-full',
         style: { 
-          position: 'relative',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           width: '100%',
-          height: '100%',
-          minHeight: '800px'
+          height: '100%'
         }
       }, [
         React.createElement(ReactFlowComponent, {
@@ -702,10 +695,10 @@
           onNodesChange: onNodesChange,
           onEdgesChange: onEdgesChange,
           onConnect: onConnect,
-          onDrop: onDrop,
-          onDragOver: onDragOver,
-          nodeTypes: { service: ServiceNode },
-          fitView: false, // We'll handle fitView manually after nodes are added
+          onNodeDragStop: onNodeDragStop,
+          nodeTypes: nodeTypes,
+          fitView: true,
+          fitViewOptions: { padding: 0.8, minZoom: 0.2, maxZoom: 1 },
           defaultEdgeOptions: {
             style: { strokeWidth: 2, stroke: '#ef4444' },
             type: 'smoothstep'
@@ -719,328 +712,24 @@
           nodesConnectable: true,
           elementsSelectable: true,
           proOptions: { hideAttribution: true },
-          nodeOrigin: [0, 0],
-          // Ensure proper rendering
-          onlyRenderVisibleElements: false,
-          // Prevent viewport issues
-          minZoom: 0.1,
-          maxZoom: 2
+          minZoom: 0.05,
+          maxZoom: 2,
+          defaultViewport: { x: 100, y: 100, zoom: 0.5 }
         }, children)
       ]);
     };
-
-    // Setup drag and drop for sidebar items
-    function setupDragAndDrop() {
-      document.querySelectorAll('.service-item').forEach(item => {
-        // Remove existing listeners by cloning
-        if (item.hasAttribute('data-drag-setup')) {
-          return; // Already set up
-        }
-        item.setAttribute('data-drag-setup', 'true');
-        
-        item.addEventListener('dragstart', (e) => {
-          const serviceKey = item.dataset.serviceKey;
-          if (serviceKey) {
-            // Set data in multiple formats for compatibility
-            e.dataTransfer.setData('application/reactflow', serviceKey);
-            e.dataTransfer.setData('text/plain', serviceKey);
-            e.dataTransfer.effectAllowed = 'move';
-            
-            // Create a visible drag image that shows what's being dragged
-            const dragImage = item.cloneNode(true);
-            dragImage.style.position = 'absolute';
-            dragImage.style.top = '-1000px';
-            dragImage.style.width = item.offsetWidth + 'px';
-            dragImage.style.opacity = '0.8';
-            dragImage.style.transform = 'rotate(5deg)';
-            dragImage.style.pointerEvents = 'none';
-            document.body.appendChild(dragImage);
-            e.dataTransfer.setDragImage(dragImage, item.offsetWidth / 2, item.offsetHeight / 2);
-            setTimeout(() => {
-              if (document.body.contains(dragImage)) {
-                document.body.removeChild(dragImage);
-              }
-            }, 0);
-            
-            // Add visual feedback to original
-            item.style.opacity = '0.4';
-            item.style.transform = 'scale(0.95)';
-            
-            console.log('Drag started for service:', serviceKey);
-          } else {
-            console.warn('Service item missing data-service-key attribute', item);
-            e.preventDefault(); // Cancel drag if no service key
-          }
-        });
-        
-        item.addEventListener('dragend', (e) => {
-          // Restore visual state
-          item.style.opacity = '1';
-          item.style.transform = '';
-          console.log('Drag ended, dropEffect:', e.dataTransfer?.dropEffect);
-          
-          // If drop was successful (not cancelled), the node should be on canvas
-          if (e.dataTransfer?.dropEffect === 'move') {
-            console.log('Drop was successful');
-          } else {
-            console.log('Drop was cancelled or failed');
-          }
-        });
-        
-        // Make sure it's draggable
-        item.setAttribute('draggable', 'true');
-      });
-    }
-    
-    // Prevent default drag behavior on the document to allow drops
-    // This must be on the capture phase to work properly
-    document.addEventListener('dragover', (e) => {
-      // Always allow drops on React Flow canvas area
-      const reactFlowArea = document.getElementById('react-flow-container') ||
-                           document.getElementById('react-flow-root') || 
-                           e.target.closest('.react-flow') ||
-                           e.target.closest('[id*="react-flow"]');
-      if (reactFlowArea) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer) {
-          e.dataTransfer.dropEffect = 'move';
-        }
-        return false;
-      }
-    }, true); // Use capture phase
-    
-    // Manual drop handler as fallback if React Flow's onDrop doesn't work
-    function handleManualDrop(e) {
-      const reactFlowArea = document.getElementById('react-flow-container') ||
-                           document.getElementById('react-flow-root') || 
-                           e.target.closest('.react-flow') ||
-                           e.target.closest('.react-flow__viewport') ||
-                           e.target.closest('[id*="react-flow"]');
-      
-      if (!reactFlowArea) {
-        // Not on React Flow area
-        if (!e.target.closest('.service-item')) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        return;
-      }
-      
-      // Get service key from drag data
-      let serviceKey = null;
-      try {
-        serviceKey = e.dataTransfer.getData('application/reactflow');
-        if (!serviceKey) {
-          serviceKey = e.dataTransfer.getData('text/plain');
-        }
-      } catch (err) {
-        console.error('Error reading drag data:', err);
-      }
-      
-      if (!serviceKey) {
-        return; // Not a service drag
-      }
-      
-      console.log('Manual drop handler triggered for:', serviceKey);
-      
-      // Use the exposed setNodes function
-      if (window.workflowSetNodes && window.workflowServices && window.workflowReactFlowInstance) {
-        const setNodes = window.workflowSetNodes;
-        const services = window.workflowServices;
-        const reactFlowInstance = window.workflowReactFlowInstance;
-        const currentNodes = window.workflowNodes || [];
-        const currentEdges = window.workflowEdges || [];
-        
-        // Calculate position relative to React Flow viewport
-        let position;
-        try {
-          if (reactFlowInstance && reactFlowInstance.screenToFlowPosition) {
-            position = reactFlowInstance.screenToFlowPosition({
-              x: e.clientX,
-              y: e.clientY
-            });
-            console.log('Position from screenToFlowPosition:', position);
-          } else {
-            // Fallback: calculate relative to React Flow container
-            const reactFlowEl = document.querySelector('.react-flow__viewport') || 
-                               document.querySelector('.react-flow') ||
-                               document.getElementById('react-flow-root');
-            if (reactFlowEl) {
-              const rect = reactFlowEl.getBoundingClientRect();
-              // Get current viewport transform if available
-              const viewport = reactFlowInstance?.getViewport?.() || { x: 0, y: 0, zoom: 1 };
-              const zoom = viewport.zoom || reactFlowInstance?.getZoom?.() || 1;
-              
-              // Calculate position accounting for zoom and pan
-              position = {
-                x: (e.clientX - rect.left - viewport.x) / zoom,
-                y: (e.clientY - rect.top - viewport.y) / zoom
-              };
-              console.log('Position from fallback calculation:', position, 'viewport:', viewport, 'zoom:', zoom);
-            } else {
-              // Last resort: use mouse position with offset
-              const existingNodes = currentNodes || [];
-              const lastNode = existingNodes[existingNodes.length - 1];
-              if (lastNode && lastNode.position) {
-                // Offset from last node
-                position = {
-                  x: lastNode.position.x + 250,
-                  y: lastNode.position.y
-                };
-              } else {
-                position = { x: 100, y: 100 };
-              }
-              console.log('Position from last resort (offset from last node):', position);
-            }
-          }
-        } catch (error) {
-          console.error('Error calculating position:', error);
-          // Fallback to offset from existing nodes
-          const existingNodes = currentNodes || [];
-          const lastNode = existingNodes[existingNodes.length - 1];
-          if (lastNode && lastNode.position) {
-            position = {
-              x: lastNode.position.x + 300,
-              y: lastNode.position.y + (currentNodes.length % 2 === 0 ? 150 : 0)
-            };
-          } else {
-            position = { x: 200, y: 200 };
-          }
-        }
-        
-        const serviceInfo = services[serviceKey] || services[serviceKey.toString()];
-        const label = serviceInfo?.name || serviceInfo?.['name'] || 
-                     serviceKey.toString().replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        
-        // Ensure position is valid numbers
-        if (!position || typeof position.x !== 'number' || typeof position.y !== 'number') {
-          console.error('Invalid position in manual drop, using default');
-          const lastNode = currentNodes[currentNodes.length - 1];
-          if (lastNode && lastNode.position) {
-            position = { 
-              x: lastNode.position.x + 300, 
-              y: lastNode.position.y + (currentNodes.length % 2 === 0 ? 150 : 0)
-            };
-          } else {
-            position = { x: 200, y: 200 };
-          }
-        }
-        
-        const newNode = {
-          id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          type: 'service',
-          position: { x: Number(position.x), y: Number(position.y) },
-          data: {
-            label: label,
-            service_name: serviceKey,
-            config: {}
-          },
-          draggable: true,
-          selectable: true
-        };
-        
-        console.log('Manual drop creating node:', newNode);
-        
-        setNodes((nds) => {
-          // Check for duplicates
-          const existing = nds.find(n => n.id === newNode.id);
-          if (existing) {
-            console.warn('Node already exists, skipping');
-            return nds;
-          }
-          
-          const updated = [...nds, newNode];
-          console.log('Manual drop: Added node. Total nodes:', updated.length);
-          console.log('New node position:', newNode.position);
-          console.log('All node positions:', updated.map(n => ({ id: n.id, pos: n.position })));
-          
-          // Force React Flow to update by using a small delay
-          setTimeout(() => {
-            // Inspect what React Flow actually rendered
-            setTimeout(() => {
-              const reactFlowNodes = document.querySelectorAll('.react-flow__node');
-              console.log('=== DOM INSPECTION ===');
-              console.log('React Flow nodes in DOM:', reactFlowNodes.length);
-              reactFlowNodes.forEach((nodeEl, idx) => {
-                const transform = window.getComputedStyle(nodeEl).transform;
-                const left = window.getComputedStyle(nodeEl).left;
-                const top = window.getComputedStyle(nodeEl).top;
-                const nodeId = nodeEl.getAttribute('data-id') || nodeEl.querySelector('[data-node-id]')?.getAttribute('data-node-id');
-                console.log(`Node ${idx + 1}:`, {
-                  id: nodeId,
-                  transform: transform,
-                  left: left,
-                  top: top,
-                  position: nodeEl.style.position
-                });
-              });
-              
-              // Try to fit view to show all nodes with proper padding
-              if (reactFlowInstance && reactFlowInstance.fitView) {
-                setTimeout(() => {
-                  reactFlowInstance.fitView({ 
-                    padding: 0.3, 
-                    duration: 400,
-                    minZoom: 0.5,
-                    maxZoom: 1.5
-                  });
-                }, 100);
-              } else if (reactFlowInstance && reactFlowInstance.getNodesBounds) {
-                // Alternative: calculate bounds and set viewport
-                const bounds = reactFlowInstance.getNodesBounds(updated);
-                if (bounds) {
-                  const viewport = reactFlowInstance.getViewport();
-                  const x = -bounds.x + (viewport.width || 800) / 2 - bounds.width / 2;
-                  const y = -bounds.y + (viewport.height || 600) / 2 - bounds.height / 2;
-                  reactFlowInstance.setViewport({ x, y, zoom: 1 }, { duration: 400 });
-                }
-              }
-            }, 300);
-            
-            // Save workflow
-            if (window.saveWorkflow) {
-              window.saveWorkflow(updated, currentEdges);
-            }
-          }, 100);
-          
-          return updated;
-        });
-        
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    }
-    
-    // Add manual drop handler
-    document.addEventListener('drop', handleManualDrop, true); // Use capture phase
-    
-    // Setup on page load and after Turbo navigation
-    function initDragAndDrop() {
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupDragAndDrop);
-      } else {
-        setupDragAndDrop();
-      }
-    }
-    
-    initDragAndDrop();
-    
-    // Re-setup after Turbo navigation
-    document.addEventListener('turbo:load', setupDragAndDrop);
-    document.addEventListener('turbo:render', setupDragAndDrop);
 
     // Setup modal close handlers
     function setupModalHandlers() {
       const modal = document.getElementById('node-data-modal');
       const closeBtn = document.getElementById('close-node-modal-btn');
-      
+
       if (closeBtn) {
         closeBtn.onclick = () => {
           if (modal) modal.classList.add('hidden');
         };
       }
-      
+
       if (modal) {
         modal.onclick = (e) => {
           if (e.target === modal) {
@@ -1048,13 +737,306 @@
           }
         };
       }
+
+      // Config modal handlers
+      const configModal = document.getElementById('node-config-modal');
+      const closeConfigBtn = document.getElementById('close-config-modal-btn');
+      const cancelConfigBtn = document.getElementById('cancel-config-btn');
+
+      if (closeConfigBtn) {
+        closeConfigBtn.onclick = () => {
+          if (configModal) configModal.classList.add('hidden');
+        };
+      }
+
+      if (cancelConfigBtn) {
+        cancelConfigBtn.onclick = () => {
+          if (configModal) configModal.classList.add('hidden');
+        };
+      }
+
+      if (configModal) {
+        configModal.onclick = (e) => {
+          if (e.target === configModal) {
+            configModal.classList.add('hidden');
+          }
+        };
+      }
     }
-    
+
     setupModalHandlers();
-    
+
     // Re-setup after Turbo navigation
     document.addEventListener('turbo:load', setupModalHandlers);
     document.addEventListener('turbo:render', setupModalHandlers);
+
+    // Node configuration modal functions
+    let currentConfigNodeId = null;
+    let currentConfigNodeData = null;
+
+    // Open the node configuration modal
+    window.openNodeConfigModal = function(nodeId, nodeData) {
+      console.log('openNodeConfigModal called with:', nodeId, nodeData);
+      currentConfigNodeId = nodeId;
+      currentConfigNodeData = nodeData;
+
+      const modal = document.getElementById('node-config-modal');
+      const title = document.getElementById('node-config-title');
+      const nodeIdField = document.getElementById('config-node-id');
+      const serviceNameField = document.getElementById('config-service-name');
+      const labelField = document.getElementById('config-node-label');
+      const methodSelect = document.getElementById('config-method');
+      const methodDescription = document.getElementById('method-description');
+      const inputsContainer = document.getElementById('config-inputs-container');
+      const apiKeySection = document.getElementById('api-key-section');
+      const apiKeyFields = document.getElementById('api-key-fields');
+
+      if (!modal) {
+        console.error('Config modal element not found!');
+        return;
+      }
+      console.log('Modal element found, proceeding...');
+
+      // Set title and hidden fields
+      title.textContent = `Configure: ${nodeData.label || nodeData.service_name || 'Node'}`;
+      nodeIdField.value = nodeId;
+      serviceNameField.value = nodeData.service_name || '';
+      labelField.value = nodeData.label || '';
+
+      // Get service info for this node
+      const serviceName = nodeData.service_name;
+      const serviceInfo = services[serviceName];
+
+      // Clear and populate method dropdown
+      methodSelect.innerHTML = '<option value="">Select a method...</option>';
+      methodDescription.textContent = '';
+      inputsContainer.innerHTML = '';
+
+      if (serviceInfo && serviceInfo.methods) {
+        Object.entries(serviceInfo.methods).forEach(([methodKey, methodInfo]) => {
+          const option = document.createElement('option');
+          option.value = methodKey;
+          option.textContent = methodInfo.name || methodKey;
+          // Select current method if configured
+          if (nodeData.config && nodeData.config.method === methodKey) {
+            option.selected = true;
+          }
+          methodSelect.appendChild(option);
+        });
+
+        // If a method is selected, show its description and inputs
+        if (nodeData.config && nodeData.config.method) {
+          const selectedMethod = serviceInfo.methods[nodeData.config.method];
+          if (selectedMethod) {
+            methodDescription.textContent = selectedMethod.description || '';
+            renderInputFields(selectedMethod.inputs || {}, nodeData.config || {});
+          }
+        }
+      }
+
+      // Handle method selection change
+      methodSelect.onchange = function() {
+        const selectedMethodKey = this.value;
+        inputsContainer.innerHTML = '';
+        methodDescription.textContent = '';
+
+        if (selectedMethodKey && serviceInfo && serviceInfo.methods && serviceInfo.methods[selectedMethodKey]) {
+          const methodInfo = serviceInfo.methods[selectedMethodKey];
+          methodDescription.textContent = methodInfo.description || '';
+          renderInputFields(methodInfo.inputs || {}, nodeData.config || {});
+        }
+      };
+
+      // Handle API key section for services that need it
+      apiKeySection.classList.add('hidden');
+      apiKeyFields.innerHTML = '';
+
+      if (serviceName === 'abuse_ch' || serviceName === 'abuseipdb') {
+        apiKeySection.classList.remove('hidden');
+        const apiKeyName = serviceName === 'abuse_ch' ? 'abuse_ch_api_key' : 'abuseipdb_api_key';
+        const apiKeyLabel = serviceName === 'abuse_ch' ? 'abuse.ch API Key' : 'AbuseIPDB API Key';
+
+        apiKeyFields.innerHTML = `
+          <div>
+            <label for="config-api-key" class="block text-sm font-medium text-gray-700">${apiKeyLabel}</label>
+            <input type="password" id="config-api-key" name="api_key"
+                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+                   placeholder="Enter API key (optional)"
+                   value="${(nodeData.config && nodeData.config.api_key) || ''}" />
+            <p class="mt-1 text-xs text-gray-500">API key will be stored securely with this node's configuration.</p>
+          </div>
+        `;
+      }
+
+      console.log('Showing config modal');
+      modal.classList.remove('hidden');
+    };
+
+    // Render dynamic input fields based on method inputs
+    function renderInputFields(inputs, currentConfig) {
+      const container = document.getElementById('config-inputs-container');
+      container.innerHTML = '';
+
+      if (!inputs || Object.keys(inputs).length === 0) {
+        container.innerHTML = '<p class="text-sm text-gray-500 italic">This method has no configurable inputs.</p>';
+        return;
+      }
+
+      Object.entries(inputs).forEach(([inputKey, inputDef]) => {
+        const fieldDiv = document.createElement('div');
+
+        const label = document.createElement('label');
+        label.htmlFor = `config-input-${inputKey}`;
+        label.className = 'block text-sm font-medium text-gray-700';
+        label.textContent = inputKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        if (inputDef.required) {
+          label.innerHTML += ' <span class="text-red-500">*</span>';
+        }
+        fieldDiv.appendChild(label);
+
+        let inputEl;
+        const currentValue = currentConfig[inputKey] !== undefined ? currentConfig[inputKey] : (inputDef.default || '');
+
+        if (inputDef.type === 'string' && inputKey === 'operator') {
+          // Special case: operator dropdown
+          inputEl = document.createElement('select');
+          inputEl.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm';
+          ['equals', 'contains', 'greater_than', 'less_than'].forEach(op => {
+            const opt = document.createElement('option');
+            opt.value = op;
+            opt.textContent = op.replace(/_/g, ' ');
+            if (currentValue === op) opt.selected = true;
+            inputEl.appendChild(opt);
+          });
+        } else if (inputDef.type === 'object') {
+          // For object types, use textarea with JSON
+          inputEl = document.createElement('textarea');
+          inputEl.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm font-mono text-xs';
+          inputEl.rows = 4;
+          inputEl.placeholder = 'Enter JSON object, e.g., {"old_field": "new_field"}';
+          inputEl.value = typeof currentValue === 'object' ? JSON.stringify(currentValue, null, 2) : currentValue;
+        } else if (inputDef.type === 'integer') {
+          inputEl = document.createElement('input');
+          inputEl.type = 'number';
+          inputEl.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm';
+          inputEl.value = currentValue;
+        } else {
+          inputEl = document.createElement('input');
+          inputEl.type = 'text';
+          inputEl.className = 'mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm';
+          inputEl.value = currentValue;
+        }
+
+        inputEl.id = `config-input-${inputKey}`;
+        inputEl.name = inputKey;
+        if (inputDef.required) inputEl.required = true;
+
+        fieldDiv.appendChild(inputEl);
+
+        // Add help text if default value exists
+        if (inputDef.default !== undefined) {
+          const helpText = document.createElement('p');
+          helpText.className = 'mt-1 text-xs text-gray-500';
+          helpText.textContent = `Default: ${inputDef.default}`;
+          fieldDiv.appendChild(helpText);
+        }
+
+        container.appendChild(fieldDiv);
+      });
+    }
+
+    // Handle form submission
+    document.getElementById('node-config-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      if (!currentConfigNodeId) return;
+
+      const formData = new FormData(this);
+      const config = {};
+
+      // Get method
+      const method = formData.get('method');
+      if (method) {
+        config.method = method;
+      }
+
+      // Get all input fields from the inputs container
+      const inputsContainer = document.getElementById('config-inputs-container');
+      const inputs = inputsContainer.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+        if (input.name && input.value !== '') {
+          // Try to parse JSON for object fields
+          if (input.tagName === 'TEXTAREA') {
+            try {
+              config[input.name] = JSON.parse(input.value);
+            } catch {
+              config[input.name] = input.value;
+            }
+          } else if (input.type === 'number') {
+            config[input.name] = parseInt(input.value, 10);
+          } else {
+            config[input.name] = input.value;
+          }
+        }
+      });
+
+      // Get API key if present
+      const apiKeyInput = document.getElementById('config-api-key');
+      if (apiKeyInput && apiKeyInput.value) {
+        config.api_key = apiKeyInput.value;
+      }
+
+      // Get label
+      const label = formData.get('label');
+
+      // Save configuration
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      fetch(`${updateNodeConfigUrl}?node_id=${encodeURIComponent(currentConfigNodeId)}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          config: config,
+          label: label
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Update the node in React Flow state
+          if (window.workflowSetNodes) {
+            window.workflowSetNodes(nodes => nodes.map(node => {
+              if (node.id === currentConfigNodeId) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    label: label || node.data.label,
+                    config: config
+                  }
+                };
+              }
+              return node;
+            }));
+          }
+
+          // Close modal
+          document.getElementById('node-config-modal').classList.add('hidden');
+
+          // Show success feedback
+          console.log('Node configuration saved successfully');
+        } else {
+          alert('Error saving configuration: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        console.error('Error saving node configuration:', error);
+        alert('Error saving configuration: ' + error.message);
+      });
+    });
 
     // Render React Flow
     const rootEl = document.getElementById('react-flow-root');
@@ -1075,6 +1057,48 @@
           React.createElement(WorkflowBuilder)
         )
       );
+
+      // Setup click-to-add handlers after React renders
+      setTimeout(() => {
+        setupAddNodeButtons();
+      }, 500);
+
+      function setupAddNodeButtons() {
+        const addButtons = document.querySelectorAll('.add-node-btn');
+        console.log('Setting up', addButtons.length, 'add node buttons');
+
+        addButtons.forEach(btn => {
+          // Remove existing listeners by cloning
+          const newBtn = btn.cloneNode(true);
+          btn.parentNode.replaceChild(newBtn, btn);
+
+          newBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const serviceKey = newBtn.dataset.serviceKey;
+            const serviceName = newBtn.dataset.serviceName;
+
+            console.log('Add button clicked for:', serviceKey);
+
+            if (!window.addWorkflowNode) {
+              console.error('addWorkflowNode not available yet');
+              alert('Please wait for the canvas to load');
+              return;
+            }
+
+            // Call the exposed function
+            window.addWorkflowNode(serviceKey, serviceName);
+
+            // Visual feedback
+            newBtn.classList.add('scale-90');
+            setTimeout(() => newBtn.classList.remove('scale-90'), 150);
+          });
+        });
+
+        console.log('Add node buttons setup complete');
+      }
+
     } catch (error) {
       console.error('Error rendering React Flow:', error);
       rootEl.innerHTML = `<div class="p-4 text-red-600">Error rendering workflow builder: ${error.message}</div>`;

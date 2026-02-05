@@ -1,6 +1,6 @@
 module Admin
   class WorkflowsController < BaseController
-    before_action :set_workflow, only: [:show, :edit, :update, :destroy, :execute, :results, :node_data]
+    before_action :set_workflow, only: [:show, :edit, :update, :destroy, :execute, :results, :node_data, :update_node_config]
 
     def index
       @workflows = Workflow.order(created_at: :desc).page(params[:page])
@@ -109,7 +109,7 @@ module Admin
     def node_data
       node_id = params[:node_id]
       node = @workflow.workflow_nodes.find_by(node_id: node_id)
-      
+
       unless node
         render json: { error: 'Node not found' }, status: :not_found
         return
@@ -117,18 +117,19 @@ module Admin
 
       # Get the most recent execution for this workflow
       execution = @workflow.workflow_executions.recent.first
-      
+
       if execution && execution.result_data
         # Find node output in execution results
-        node_output = execution.result_data.dig('node_outputs', node_id) || 
+        node_output = execution.result_data.dig('node_outputs', node_id) ||
                       execution.result_data.dig('results', node_id)
-        
+
         render json: {
           node: {
             id: node.node_id,
             label: node.label,
             service_name: node.service_name,
-            node_type: node.node_type
+            node_type: node.node_type,
+            config: node.config || {}
           },
           data: node_output || [],
           execution_status: execution.status,
@@ -140,11 +141,51 @@ module Admin
             id: node.node_id,
             label: node.label,
             service_name: node.service_name,
-            node_type: node.node_type
+            node_type: node.node_type,
+            config: node.config || {}
           },
           data: [],
           message: 'No execution data available. Execute the workflow to see results.'
         }
+      end
+    end
+
+    def update_node_config
+      node_id = params[:node_id]
+      node = @workflow.workflow_nodes.find_by(node_id: node_id)
+
+      unless node
+        render json: { error: 'Node not found' }, status: :not_found
+        return
+      end
+
+      begin
+        config = params[:config] || {}
+        # Merge new config with existing config
+        new_config = (node.config || {}).merge(config.to_unsafe_h)
+
+        # Update label if provided
+        label = params[:label]
+
+        updates = { config: new_config }
+        updates[:label] = label if label.present?
+
+        if node.update(updates)
+          render json: {
+            success: true,
+            node: {
+              id: node.node_id,
+              label: node.label,
+              service_name: node.service_name,
+              config: node.config
+            }
+          }
+        else
+          render json: { success: false, error: node.errors.full_messages.join(', ') }, status: :unprocessable_entity
+        end
+      rescue => e
+        Rails.logger.error "Error updating node config: #{e.message}"
+        render json: { success: false, error: e.message }, status: :unprocessable_entity
       end
     end
 
