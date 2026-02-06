@@ -12,40 +12,47 @@
   </div>
 
   <!-- Workflow Builder with Sidebar -->
-  <div class="bg-white shadow rounded-lg mb-6 overflow-hidden">
+  <div class="bg-slate-900 shadow-2xl rounded-lg mb-6 overflow-hidden border border-slate-700">
     <div class="flex" style="height: 800px;">
-      <!-- Services Sidebar -->
-      <div class="w-64 bg-gray-50 border-r border-gray-200 overflow-y-auto flex-shrink-0">
-        <div class="p-4 border-b border-gray-200">
-          <h3 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Available Services</h3>
-          <p class="mt-1 text-xs text-gray-500">Click + to add to canvas</p>
+      <!-- Services Sidebar - Modern Dark Theme -->
+      <div class="w-64 flex-shrink-0 overflow-y-auto" style="background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);">
+        <div class="p-4 border-b border-cyan-500/20 sticky top-0 z-10" style="background: linear-gradient(180deg, #0f172a 0%, rgba(15, 23, 42, 0.95) 100%); backdrop-filter: blur(8px);">
+          <h3 class="text-sm font-semibold text-white uppercase tracking-wide flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Available Services
+          </h3>
+          <p class="mt-1 text-xs text-white">Click + to add to canvas</p>
         </div>
-        <div class="p-2 space-y-2" id="services-sidebar">
+        <div class="p-3 space-y-2" id="services-sidebar">
           <% @service_info.each do |service_key, service_data| %>
             <div
-              class="service-item p-3 bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+              class="service-item group p-3 rounded-lg cursor-default transition-all duration-200"
+              style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border: 1px solid #475569;"
               data-service-key="<%= service_key %>"
               data-service-name="<%= service_data[:name] %>">
-              <div class="flex items-center space-x-2">
+              <div class="flex items-center gap-3">
                 <div class="flex-shrink-0">
-                  <div class="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
-                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div class="w-9 h-9 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%); border: 1px solid rgba(34, 211, 238, 0.2); box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   </div>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-900 truncate"><%= service_data[:name] %></p>
-                  <p class="text-xs text-gray-500 truncate"><%= service_data[:description] %></p>
+                  <p class="text-sm font-medium text-white truncate group-hover:text-cyan-300 transition-colors" style="text-shadow: 0 0 8px rgba(34, 211, 238, 0.1);"><%= service_data[:name] %></p>
+                  <p class="text-xs text-slate-500 truncate"><%= service_data[:description] %></p>
                 </div>
                 <button
                   type="button"
-                  class="add-node-btn flex-shrink-0 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors"
+                  class="add-node-btn flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-110"
+                  style="background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%); color: #0f172a;"
                   data-service-key="<%= service_key %>"
                   data-service-name="<%= service_data[:name] %>"
                   title="Add to canvas">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                 </button>
               </div>
@@ -64,7 +71,7 @@
              data-node-data-url="<%= node_data_admin_workflow_path(@workflow) %>"
              data-update-node-config-url="<%= update_node_config_admin_workflow_path(@workflow) %>"
              style="width: 100%; height: 100%; position: relative;">
-          <div id="react-flow-root" style="width: 100%; height: 100%; background: #f9fafb; position: relative;"></div>
+          <div id="react-flow-root" style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); position: relative;"></div>
         </div>
       </div>
     </div>
@@ -209,29 +216,141 @@
 </div>
 
 <%= stylesheet_link_tag "https://unpkg.com/reactflow@11/dist/style.css" %>
+
+<style>
+  /* Dark theme overrides for React Flow */
+  .react-flow__controls {
+    background: #1e293b !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .react-flow__controls-button {
+    background: #1e293b !important;
+    border-bottom: 1px solid #475569 !important;
+    color: #94a3b8 !important;
+    fill: #94a3b8 !important;
+  }
+
+  .react-flow__controls-button:hover {
+    background: #334155 !important;
+    color: #22d3ee !important;
+    fill: #22d3ee !important;
+  }
+
+  .react-flow__controls-button svg {
+    fill: currentColor !important;
+  }
+
+  .react-flow__minimap {
+    background: #0f172a !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+  }
+
+  .react-flow__edge-path {
+    stroke: #22d3ee !important;
+    filter: drop-shadow(0 0 3px rgba(34, 211, 238, 0.5));
+  }
+
+  .react-flow__edge.animated path {
+    stroke-dasharray: 5 !important;
+    animation: dashdraw 0.5s linear infinite !important;
+  }
+
+  @keyframes dashdraw {
+    from { stroke-dashoffset: 10; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  .react-flow__handle {
+    transition: all 0.2s ease !important;
+  }
+
+  .react-flow__handle:hover {
+    transform: scale(1.3) !important;
+    box-shadow: 0 0 15px currentColor !important;
+  }
+
+  /* Selection box */
+  .react-flow__selection {
+    background: rgba(34, 211, 238, 0.1) !important;
+    border: 1px dashed #22d3ee !important;
+  }
+
+  /* Attribution hidden */
+  .react-flow__attribution {
+    display: none !important;
+  }
+
+  /* Add node button hover effect */
+  .add-node-btn {
+    box-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+  }
+  .add-node-btn:hover {
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.5);
+  }
+
+  /* Service item hover effect */
+  .service-item {
+    box-shadow: 0 0 12px rgba(34, 211, 238, 0.05), 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  .service-item:hover {
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.15), 0 4px 16px rgba(0, 0, 0, 0.3);
+    border-color: rgba(34, 211, 238, 0.4) !important;
+  }
+</style>
 <%= javascript_include_tag "https://unpkg.com/react@18/umd/react.development.js" %>
 <%= javascript_include_tag "https://unpkg.com/react-dom@18/umd/react-dom.development.js" %>
 <%= javascript_include_tag "https://unpkg.com/reactflow@11/dist/umd/index.js" %>
 
 <script>
   (function() {
-    const builderEl = document.getElementById('workflow-builder');
-    if (!builderEl) return;
-
-    const workflowData = JSON.parse(builderEl.dataset.workflowData || '{"nodes":[],"edges":[]}');
-    const services = JSON.parse(builderEl.dataset.services || '{}');
-    const updateUrl = builderEl.dataset.updateUrl;
-    const nodeDataUrlTemplate = builderEl.dataset.nodeDataUrl;
-    const updateNodeConfigUrl = builderEl.dataset.updateNodeConfigUrl;
-    const workflowId = builderEl.dataset.workflowId;
-
-    const { React, ReactDOM } = window;
-    const ReactFlow = window.ReactFlow;
-
-    if (!React || !ReactDOM || !ReactFlow) {
-      console.error('React Flow not loaded');
+    // Prevent multiple initializations of event listeners
+    if (window._workflowBuilderListenersAttached) {
+      // Just re-initialize the builder if listeners are already attached
+      setTimeout(function() {
+        if (typeof window._initWorkflowBuilder === 'function') {
+          window._initWorkflowBuilder();
+        }
+      }, 100);
       return;
     }
+    window._workflowBuilderListenersAttached = true;
+
+    // Track if we've already initialized to avoid double-init
+    let reactFlowRoot = null;
+    let initialized = false;
+
+    function initWorkflowBuilder() {
+      const builderEl = document.getElementById('workflow-builder');
+      if (!builderEl) return;
+
+      // Check if already initialized with same workflow
+      const workflowId = builderEl.dataset.workflowId;
+      if (initialized && window._currentWorkflowId === workflowId) {
+        console.log('Workflow builder already initialized for this workflow');
+        return;
+      }
+
+      console.log('Initializing workflow builder for workflow:', workflowId);
+      initialized = true;
+      window._currentWorkflowId = workflowId;
+
+      const workflowData = JSON.parse(builderEl.dataset.workflowData || '{"nodes":[],"edges":[]}');
+      const services = JSON.parse(builderEl.dataset.services || '{}');
+      const updateUrl = builderEl.dataset.updateUrl;
+      const nodeDataUrlTemplate = builderEl.dataset.nodeDataUrl;
+      const updateNodeConfigUrl = builderEl.dataset.updateNodeConfigUrl;
+
+      const { React, ReactDOM } = window;
+      const ReactFlow = window.ReactFlow;
+
+      if (!React || !ReactDOM || !ReactFlow) {
+        console.error('React Flow not loaded');
+        return;
+      }
 
     const { useCallback, useState, useRef, useEffect, useMemo } = React;
 
@@ -261,39 +380,79 @@
     // Global state for node config modal
     window.nodeConfigState = {};
 
-    // Simple custom node using default React Flow patterns
+    // Modern Dark themed custom node - Compact version
     function ServiceNode({ data, id }) {
       const configuredMethod = data.config?.method;
+      const [isHovered, setIsHovered] = useState(false);
 
       return React.createElement('div', {
+        onMouseEnter: () => setIsHovered(true),
+        onMouseLeave: () => setIsHovered(false),
         style: {
-          padding: 10,
-          borderRadius: 5,
-          background: 'white',
-          border: '2px solid #ef4444',
-          minWidth: 150
+          padding: '10px 12px',
+          borderRadius: '8px',
+          background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+          border: '1px solid #475569',
+          minWidth: '140px',
+          maxWidth: '160px',
+          boxShadow: isHovered
+            ? '0 0 20px rgba(34, 211, 238, 0.25), 0 0 40px rgba(168, 85, 247, 0.1), 0 4px 20px rgba(0, 0, 0, 0.4)'
+            : '0 0 12px rgba(34, 211, 238, 0.1), 0 0 24px rgba(168, 85, 247, 0.05), 0 2px 8px rgba(0, 0, 0, 0.3)',
+          transition: 'all 0.2s ease',
+          fontSize: '12px'
         }
       }, [
-        // Handles for connections
+        // Handles for connections - compact
         Handle && React.createElement(Handle, {
           key: 'target',
           type: 'target',
           position: Position.Left,
-          style: { background: '#3b82f6' }
+          style: {
+            background: '#3b82f6',
+            width: '8px',
+            height: '8px',
+            border: '1.5px solid #1e293b',
+            boxShadow: '0 0 6px rgba(59, 130, 246, 0.5)'
+          }
         }),
         Handle && React.createElement(Handle, {
           key: 'source',
           type: 'source',
           position: Position.Right,
-          style: { background: '#ef4444' }
+          style: {
+            background: '#22d3ee',
+            width: '8px',
+            height: '8px',
+            border: '1.5px solid #1e293b',
+            boxShadow: '0 0 6px rgba(34, 211, 238, 0.5)'
+          }
         }),
-        // Content
+        // Content - compact
         React.createElement('div', { key: 'content' }, [
+          // Header with label and config button
           React.createElement('div', {
             key: 'header',
-            style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+            style: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '4px',
+              gap: '4px'
+            }
           }, [
-            React.createElement('strong', { key: 'label' }, data.label || 'Node'),
+            React.createElement('span', {
+              key: 'label',
+              style: {
+                fontWeight: '600',
+                fontSize: '11px',
+                color: '#f8fafc',
+                textShadow: '0 0 8px rgba(34, 211, 238, 0.2)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                flex: 1
+              }
+            }, data.label || 'Node'),
             React.createElement('span', {
               key: 'config',
               className: 'nodrag',
@@ -303,17 +462,59 @@
                 const event = new CustomEvent('openNodeConfig', { detail: { nodeId: id, nodeData: data } });
                 document.dispatchEvent(event);
               },
-              style: { cursor: 'pointer', padding: '2px 6px' }
-            }, '⚙️')
+              style: {
+                cursor: 'pointer',
+                padding: '2px 4px',
+                borderRadius: '4px',
+                background: 'rgba(71, 85, 105, 0.4)',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }
+            }, React.createElement('svg', {
+              width: '12',
+              height: '12',
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: '#94a3b8',
+              strokeWidth: '2',
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round'
+            }, [
+              React.createElement('circle', { key: 'c1', cx: '12', cy: '12', r: '3' }),
+              React.createElement('path', { key: 'p1', d: 'M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' })
+            ]))
           ]),
+          // Service name badge - compact
           React.createElement('div', {
             key: 'service',
-            style: { fontSize: 11, color: '#666', marginTop: 4 }
+            style: {
+              fontSize: '9px',
+              color: '#22d3ee',
+              marginBottom: '3px',
+              padding: '1px 5px',
+              background: 'rgba(34, 211, 238, 0.1)',
+              borderRadius: '3px',
+              display: 'inline-block',
+              fontFamily: 'monospace'
+            }
           }, data.service_name || ''),
+          // Method display - compact
           React.createElement('div', {
             key: 'method',
-            style: { fontSize: 10, color: '#999', marginTop: 2 }
-          }, configuredMethod ? `Method: ${configuredMethod}` : 'Configure →'),
+            style: {
+              fontSize: '9px',
+              color: configuredMethod ? '#a855f7' : '#64748b',
+              marginTop: '2px',
+              fontFamily: 'monospace',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }
+          }, configuredMethod ? `→ ${configuredMethod}` : '⚡ Configure'),
+          // View Output button
           React.createElement('div', {
             key: 'view',
             className: 'nodrag',
@@ -327,7 +528,7 @@
                 // Reset to loading state
                 contentDiv.innerHTML = `
                   <div class="text-center py-8 text-gray-500">
-                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto"></div>
                     <p class="mt-2">Loading data...</p>
                   </div>
                 `;
@@ -421,15 +622,39 @@
               }
             },
             style: {
-              marginTop: 8,
+              marginTop: '6px',
               padding: '4px 8px',
-              background: '#f0f0f0',
-              borderRadius: 3,
-              fontSize: 11,
+              background: 'linear-gradient(135deg, rgba(34, 211, 238, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)',
+              border: '1px solid rgba(34, 211, 238, 0.25)',
+              borderRadius: '4px',
+              fontSize: '9px',
               textAlign: 'center',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              color: '#94a3b8',
+              fontWeight: '500',
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px'
             }
-          }, 'View Output')
+          }, [
+            React.createElement('svg', {
+              key: 'icon',
+              width: '10',
+              height: '10',
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: '#22d3ee',
+              strokeWidth: '2',
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round'
+            }, [
+              React.createElement('path', { key: 'p1', d: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z' }),
+              React.createElement('circle', { key: 'c1', cx: '12', cy: '12', r: '3' })
+            ]),
+            'Output'
+          ])
         ])
       ]);
     }
@@ -606,14 +831,40 @@
           nodeTypes: memoizedNodeTypes,
           fitView: true,
           fitViewOptions: { padding: 0.3 },
-          defaultEdgeOptions: { type: 'smoothstep', style: { stroke: '#ef4444', strokeWidth: 2 } },
+          defaultEdgeOptions: {
+            type: 'smoothstep',
+            style: { stroke: '#22d3ee', strokeWidth: 2 },
+            animated: true
+          },
           minZoom: 0.1,
           maxZoom: 2,
           proOptions: { hideAttribution: true }
         }, [
-          Background && React.createElement(Background, { key: 'bg', variant: 'dots', gap: 20, size: 1 }),
-          Controls && React.createElement(Controls, { key: 'ctrl' }),
-          MiniMap && React.createElement(MiniMap, { key: 'mm', nodeColor: '#ef4444' })
+          Background && React.createElement(Background, {
+            key: 'bg',
+            variant: 'dots',
+            gap: 24,
+            size: 1,
+            color: '#334155'
+          }),
+          Controls && React.createElement(Controls, {
+            key: 'ctrl',
+            style: {
+              background: '#1e293b',
+              border: '1px solid #475569',
+              borderRadius: '8px'
+            }
+          }),
+          MiniMap && React.createElement(MiniMap, {
+            key: 'mm',
+            nodeColor: '#22d3ee',
+            maskColor: 'rgba(15, 23, 42, 0.8)',
+            style: {
+              background: '#0f172a',
+              border: '1px solid #475569',
+              borderRadius: '8px'
+            }
+          })
         ])
       );
     };
@@ -954,15 +1205,27 @@
       console.error('React Flow root element not found');
       return;
     }
-    
+
     if (!ReactFlowProvider) {
       rootEl.innerHTML = '<div class="p-4 text-red-600">Error: React Flow Provider not loaded. Please refresh the page.</div>';
       return;
     }
-    
+
     try {
-      const root = ReactDOM.createRoot(rootEl);
-      root.render(
+      // Unmount existing root if present
+      if (reactFlowRoot) {
+        try {
+          reactFlowRoot.unmount();
+        } catch (e) {
+          console.log('Previous root cleanup:', e.message);
+        }
+      }
+
+      // Clear the container before creating new root
+      rootEl.innerHTML = '';
+
+      reactFlowRoot = ReactDOM.createRoot(rootEl);
+      reactFlowRoot.render(
         React.createElement(ReactFlowProvider, null,
           React.createElement(WorkflowBuilder)
         )
@@ -1013,5 +1276,50 @@
       console.error('Error rendering React Flow:', error);
       rootEl.innerHTML = `<div class="p-4 text-red-600">Error rendering workflow builder: ${error.message}</div>`;
     }
+    } // End of initWorkflowBuilder function
+
+    // Expose for re-initialization
+    window._initWorkflowBuilder = initWorkflowBuilder;
+
+    // Initialize on page load and Turbo navigation
+    function handlePageLoad() {
+      // Reset initialized flag when navigating to a new page
+      initialized = false;
+      // Small delay to ensure DOM is ready and scripts are loaded
+      setTimeout(initWorkflowBuilder, 100);
+    }
+
+    // Run on initial load
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', handlePageLoad);
+    } else {
+      handlePageLoad();
+    }
+
+    // Run on Turbo navigation
+    document.addEventListener('turbo:load', handlePageLoad);
+    document.addEventListener('turbo:render', handlePageLoad);
+
+    // Cleanup when navigating away
+    document.addEventListener('turbo:before-cache', function() {
+      // Unmount React root before caching
+      if (reactFlowRoot) {
+        try {
+          reactFlowRoot.unmount();
+          reactFlowRoot = null;
+        } catch (e) {
+          console.log('React root cleanup:', e.message);
+        }
+      }
+      initialized = false;
+      window._currentWorkflowId = null;
+      // Clean up global functions
+      delete window.addWorkflowNode;
+      delete window.workflowSetNodes;
+      delete window.openNodeConfigModal;
+      delete window._initWorkflowBuilder;
+      // Reset listener flag so it can be re-attached on next workflow page
+      window._workflowBuilderListenersAttached = false;
+    });
   })();
 </script>
